@@ -3,22 +3,21 @@
 
 #include "Job.h"
 
-#define MAX_JOBS_BATCH 5
+static const int MAX_JOBS_BATCH = 5;
 
 class Batch {
    private:
-    Job jobs[MAX_JOBS_BATCH];
+    Job* batch[MAX_JOBS_BATCH];
+    int jobCount;
 
    public:
-    bool idExists(int id) {
-        int jobID;
-        for (int i = 0; i < MAX_JOBS_BATCH; i++) {
-            if (jobs[i].getID() == id) {
-                return true;
-            }
-        }
-        return false;
-    }
+    Batch();
+    int getJobCount();
+    Job* getJob(int position);
+    bool isFull();
+    bool isEmpty();
+    bool insert(Job* job);
+    bool idExists(int id);
 };
 
 #endif  // BATCH_H

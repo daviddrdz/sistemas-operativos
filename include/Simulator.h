@@ -1,52 +1,32 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
-#include <iostream>
-#include <string>
+#include <vector>
 
-#include "Job.h"
+#include "Batch.h"
+#include "JobManager.h"
 
-enum { ADD, SUB, MULT, DIV, POW };
+const int COL_LOTE = 25;
+const int COL_PROCESO = 30;
+const int COL_TERM = 25;
 
-using namespace std;
+class JobManager;
 
 class Simulator {
    private:
-    bool isValidOperation(string operation) {
-        string operators = "+-*/^";
-        size_t operatorIndex = operation.find_first_of(operators);
-        if (operatorIndex != string::npos) {
-            int operand = stoi(operation.substr(operatorIndex + 1));
-            if (operation[operatorIndex] != operators[DIV] && operand != 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool isValidID(int id) { return true; }
+    std::vector<Batch*> batches;
+    std::vector<int> registeredIDs;
+    int currentBatchIndex;
+    int currentJobIndex;
+    int globalCounter;
 
    public:
-    void captureJobs(int numJobs) {
-        string name, operation;
-        int estimatedTime, id;
-        for (int i = 0; i < numJobs; i++) {
-            cout << "Nombre: ";
-            getline(cin, name);
-            do {
-                cout << "Operation: ";
-                getline(cin, operation);
-            } while (!isValidOperation(operation));
-            do {
-                cout << "Tiempo estimado: ";
-                cin >> estimatedTime;
-            } while (estimatedTime < 0);
-            do {
-                cout << "ID: ";
-                cin >> id;
-            } while (!isValidID(id));
-        }
-    }
+    ~Simulator();
+    bool isValidID(int id);
+    void createBatches(int numJobs, JobManager* jobManager);
+    void processBatch(int batch);
+    void processBatches();
+    void printBatches();
 };
 
 #endif  // SIMULATOR_H

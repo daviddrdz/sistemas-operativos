@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "Job.h"
+#include "JobManager.h"
 #include "Simulator.h"
 
 using namespace std;
@@ -8,13 +9,15 @@ using namespace std;
 int main() {
     int numJobs;
 
+    JobManager jobManager;
     Simulator simulator;
 
     cout << "Introduzca la cantidad de procesos: ";
     cin >> numJobs;
     cin.get();
 
-    simulator.captureJobs(numJobs);
+    simulator.createBatches(numJobs, &jobManager);
+    simulator.processBatches();
 
     return 0;
 }

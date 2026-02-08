@@ -3,25 +3,29 @@
 
 #include <string>
 
-using namespace std;
+const std::string OPERATORS = "+-*/^";
 
 class Job {
    private:
-    string name;
-    string operation;
+    std::string name;
+    std::string operation;
     int estimatedTime;
+    int elapsedTime;
+    int remainingTime;
     int id;
+    float result;
 
    public:
-    string getName() { return this->name; }
-    int getID() { return this->id; }
-
-    Job(string name, string operation, int estimatedTime, int id) {
-        this->name = name;
-        this->operation = operation;
-        this->estimatedTime = estimatedTime;
-        this->id = id;
-    }
+    Job(std::string name, std::string operation, int tme, int id);
+    std::string getName();
+    std::string getOperation();
+    int getEstimatedTime();
+    int getElapsedTime();
+    int getRemainingTime();
+    int getID();
+    void passTime();
+    void calculateResult();
+    float getResult();
 };
 
 #endif  // JOB_H
