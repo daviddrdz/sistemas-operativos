@@ -23,15 +23,14 @@ Job* JobManager::captureJob(Simulator* simulator) {
     string name, operation;
     Job* job;
     int estimatedTime, id;
-    Console::clearScreen();
     cout << "Nombre: ";
     getline(cin, name);
     do {
-        cout << "Operation: ";
+        cout << "Operation (" << OPERATORS << "): ";
         getline(cin, operation);
     } while (!isValidOperation(operation));
     do {
-        cout << "Tiempo estimado: ";
+        cout << "Tiempo estimado (seg): ";
         cin >> estimatedTime;
     } while (estimatedTime < 0);
     do {
@@ -40,6 +39,7 @@ Job* JobManager::captureJob(Simulator* simulator) {
         cin.get();
     } while (!simulator->isValidID(id));
     job = new Job(name, operation, estimatedTime, id);
+    cout << endl;
     Console::pause();
 
     return job;

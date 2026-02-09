@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "Job.h"
 #include "JobManager.h"
 #include "Simulator.h"
 

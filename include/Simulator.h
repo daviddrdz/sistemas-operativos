@@ -27,6 +27,8 @@ class Simulator {
     void processBatch(int batch);
     void processBatches();
     void printBatches();
+    void printRunningState();
+    void printFinalState();
 };
 
 #endif  // SIMULATOR_H
