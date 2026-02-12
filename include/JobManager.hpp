@@ -1,8 +1,8 @@
 #ifndef JOB_MANAGER_H
 #define JOB_MANAGER_H
 
-#include "Job.h"
-#include "Simulator.h"
+#include "Job.hpp"
+#include "Simulator.hpp"
 
 enum OperationType { ADD, SUB, MULT, DIV, POW, MOD };
 

@@ -1,4 +1,4 @@
-#include "ConsoleUtils.h"
+#include "ConsoleUtils.hpp"
 
 #include <chrono>
 #include <cstdlib>

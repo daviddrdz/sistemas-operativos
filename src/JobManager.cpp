@@ -1,10 +1,10 @@
-#include "JobManager.h"
+#include "JobManager.hpp"
 
 #include <iostream>
 
-#include "ConsoleUtils.h"
-#include "Job.h"
-#include "Simulator.h"
+#include "ConsoleUtils.hpp"
+#include "Job.hpp"
+#include "Simulator.hpp"
 using namespace std;
 
 bool JobManager::isValidOperation(string operation) {

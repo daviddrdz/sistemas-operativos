@@ -1,9 +1,9 @@
-#include "Simulator.h"
+#include "Simulator.hpp"
 
 #include <iomanip>
 #include <iostream>
 
-#include "ConsoleUtils.h"
+#include "ConsoleUtils.hpp"
 
 using namespace std;
 
@@ -149,7 +149,7 @@ void Simulator::printRunningState() {
                  << setw(COL_BAT) << i + 1 << endl;
         }
 
-        if (i < currentBatchIndex - 1) {
+        if (i < currentBatchIndex) {
             for (int j = 0; j < WIDTH; j++) {
                 cout << "-";
             }

@@ -1,4 +1,4 @@
-#include "Batch.h"
+#include "Batch.hpp"
 
 Batch::Batch() { this->jobCount = 0; }
 int Batch::getJobCount() { return this->jobCount; }

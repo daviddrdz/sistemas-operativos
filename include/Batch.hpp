@@ -1,7 +1,7 @@
 #ifndef BATCH_H
 #define BATCH_H
 
-#include "Job.h"
+#include "Job.hpp"
 
 static const int MAX_JOBS_BATCH = 5;
 

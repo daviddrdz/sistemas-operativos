@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "JobManager.h"
-#include "Simulator.h"
+#include "JobManager.hpp"
+#include "Simulator.hpp"
 
 using namespace std;
 

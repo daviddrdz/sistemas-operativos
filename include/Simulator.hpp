@@ -3,8 +3,8 @@
 
 #include <vector>
 
-#include "Batch.h"
-#include "JobManager.h"
+#include "Batch.hpp"
+#include "JobManager.hpp"
 
 const int WIDTH = 35;
 const int COL_NAME = 15;
