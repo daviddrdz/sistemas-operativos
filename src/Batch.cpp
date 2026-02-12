@@ -19,12 +19,3 @@ bool Batch::insert(Job* job) {
     batch[jobCount++] = job;
     return true;
 }
-
-bool Batch::idExists(int id) {
-    for (int i = 0; i < jobCount; i++) {
-        if (batch[i]->getID() == id) {
-            return true;
-        }
-    }
-    return false;
-}

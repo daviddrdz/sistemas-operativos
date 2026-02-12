@@ -17,7 +17,6 @@ class Batch {
     bool isFull();
     bool isEmpty();
     bool insert(Job* job);
-    bool idExists(int id);
 };
 
 #endif  // BATCH_H

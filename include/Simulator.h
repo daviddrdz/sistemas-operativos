@@ -6,9 +6,12 @@
 #include "Batch.h"
 #include "JobManager.h"
 
-const int COL_LOTE = 25;
-const int COL_PROCESO = 30;
-const int COL_TERM = 25;
+const int COL_NAME = 15;
+const int COL_TME = 5;
+const int COL_ID = 5;
+const int COL_OPE = 10;
+const int COL_RES = 10;
+const int COL_BAT = 10;
 
 class JobManager;
 
@@ -21,12 +24,13 @@ class Simulator {
     int globalCounter;
 
    public:
+    Simulator();
     ~Simulator();
     bool isValidID(int id);
     void createBatches(int numJobs, JobManager* jobManager);
     void processBatch(int batch);
     void processBatches();
-    void printBatches();
+    void render();
     void printRunningState();
     void printFinalState();
 };
