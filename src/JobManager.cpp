@@ -8,15 +8,31 @@
 using namespace std;
 
 bool JobManager::isValidOperation(string operation) {
-    size_t operatorIndex = operation.find_first_of(OPERATORS);
-    if (operatorIndex != string::npos) {
-        int operand = stoi(operation.substr(operatorIndex + 1));
-        if ((operation[operatorIndex] != OPERATORS[DIV]) ||
-            (operation[operatorIndex] == OPERATORS[DIV] && operand != 0)) {
-            return true;
+    if (operation.empty()) return false;
+    int operatorIndex = -1;
+    int operatorCount = 0;
+    for (size_t i = 0; i < operation.size(); i++) {
+        char c = operation[i];
+        if (i == 0 && (c == '+' || c == '-')) continue;
+        if (string("+-*/%^").find(c) != string::npos) {
+            operatorCount++;
+            operatorIndex = i;
         }
     }
-    return false;
+
+    if (operatorCount != 1) return false;
+    if (operatorIndex == 0 || operatorIndex == (int)operation.size() - 1) {
+        return false;
+    }
+
+    string left = operation.substr(0, operatorIndex);
+    string right = operation.substr(operatorIndex + 1);
+
+    int y = stoi(right);
+    char op = operation[operatorIndex];
+    if ((op == '/' || op == '%') && y == 0) return false;
+
+    return true;
 }
 
 Job* JobManager::captureJob(Simulator* simulator) {
@@ -32,7 +48,7 @@ Job* JobManager::captureJob(Simulator* simulator) {
     do {
         cout << "Tiempo estimado (seg): ";
         cin >> estimatedTime;
-    } while (estimatedTime < 0);
+    } while (estimatedTime <= 0);
     do {
         cout << "ID: ";
         cin >> id;

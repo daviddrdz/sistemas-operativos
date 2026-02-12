@@ -28,35 +28,49 @@ void Job::passTime() {
 }
 
 void Job::calculateResult() {
-    size_t operatorIndex = this->operation.find_first_of(OPERATORS);
-    char operatorSign = this->operation.at(operatorIndex);
+    int operatorIndex = -1;
+
+    for (size_t i = 0; i < operation.size(); i++) {
+        char c = operation[i];
+
+        if (i == 0 && (c == '+' || c == '-')) continue;
+
+        if (OPERATORS.find(c) != string::npos) {
+            operatorIndex = i;
+            break;
+        }
+    }
+
+    char operatorSign = operation[operatorIndex];
+
     int x = stoi(operation.substr(0, operatorIndex));
     int y = stoi(operation.substr(operatorIndex + 1));
+
     switch (operatorSign) {
         case '+':
-            this->result = x + y;
+            result = x + y;
             break;
         case '-':
-            this->result = x - y;
+            result = x - y;
             break;
         case '*':
-            this->result = x * y;
+            result = x * y;
             break;
         case '/':
-            this->result = x / y;
-            break;
-        case '^':
-            if (0 < y) {
-                this->result = 1;
-                for (int i = 0; i < y; i++) {
-                    this->result *= x;
-                }
-            } else {
-                this->result = 1;
-            }
+            result = x / y;
             break;
         case '%':
-            this->result = x % y;
+            result = x % y;
+            break;
+        case '^':
+            if (y >= 0) {
+                result = 1;
+                for (int i = 0; i < y; i++) result *= x;
+            } else {
+                result = 1;
+                for (int i = 0; i < -y; i++) result *= x;
+                result = 1.0 / result;
+            }
             break;
     }
 }
