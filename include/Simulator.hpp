@@ -6,13 +6,13 @@
 #include "Batch.hpp"
 #include "JobManager.hpp"
 
-const int WIDTH = 35;
 const int COL_NAME = 15;
 const int COL_TME = 5;
 const int COL_ID = 5;
 const int COL_OPE = 10;
 const int COL_RES = 10;
 const int COL_BAT = 10;
+const int WIDTH = COL_ID + COL_OPE + COL_RES + COL_BAT;
 
 class JobManager;
 
@@ -28,7 +28,7 @@ class Simulator {
     Simulator();
     ~Simulator();
     bool isValidID(int id);
-    void createBatches(int numJobs, JobManager* jobManager);
+    void createBatches(int numJobs);
     void processBatch(int batch);
     void processBatches();
     void centerText(std::string text);

@@ -34,12 +34,13 @@ bool Simulator::isValidID(int id) {
     return true;
 }
 
-void Simulator::createBatches(int numJobs, JobManager* jobManager) {
+void Simulator::createBatches(int numJobs) {
+    JobManager jobManager;
     Batch* batch = new Batch();
     for (int i = 0; i < numJobs; i++) {
         Console::clearScreen();
         cout << "Proceso No. " << i + 1 << endl << endl;
-        Job* job = jobManager->captureJob(this);
+        Job* job = jobManager.captureJob(this);
         batch->insert(job);
         registeredIDs.push_back(job->getID());
         if (batch->isFull()) {
