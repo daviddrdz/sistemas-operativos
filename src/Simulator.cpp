@@ -165,8 +165,7 @@ void Simulator::printFinalState() {
 }
 
 void Simulator::render() {
-    int size = batches.size();
-    if (currentBatchIndex < size) {
+    if (currentBatchIndex < (int)batches.size()) {
         printRunningState();
     } else {
         printFinalState();
