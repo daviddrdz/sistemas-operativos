@@ -55,5 +55,8 @@ void Job::calculateResult() {
                 this->result = 1;
             }
             break;
+        case '%':
+            this->result = x % y;
+            break;
     }
 }

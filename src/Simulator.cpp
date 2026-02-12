@@ -84,6 +84,19 @@ void Simulator::processBatches() {
     Console::pause();
 }
 
+void Simulator::centerText(string text) {
+    int totalLength = text.length() + 2;
+    int x = (WIDTH - totalLength) / 2;
+    for (int i = 0; i < x; i++) {
+        cout << "-";
+    }
+    cout << " " << text << " ";
+    for (int i = 0; i < (WIDTH - x - totalLength); i++) {
+        cout << "-";
+    }
+    cout << endl;
+}
+
 void Simulator::printRunningState() {
     Console::clearScreen();
 
@@ -95,7 +108,7 @@ void Simulator::printRunningState() {
     int currentJobCount = currentBatch->getJobCount();
 
     // ----- LOTE ACTUAL -----
-    cout << "--- Lote actual " << currentBatchIndex + 1 << " ---" << endl;
+    centerText("Lote actual");
     cout << left << setw(COL_NAME) << "Nombre" << setw(COL_TME) << "TME"
          << endl;
 
@@ -109,7 +122,8 @@ void Simulator::printRunningState() {
     if (currentJobIndex < currentJobCount) {
         Job* currentJob = currentBatch->getJob(currentJobIndex);
 
-        cout << endl << "--- Proceso Actual ---" << endl;
+        cout << endl;
+        centerText("Proceso Actual");
         cout << "Nombre: " << currentJob->getName() << endl;
         cout << "Ope: " << currentJob->getOperation() << endl;
         cout << "TME: " << currentJob->getEstimatedTime() << endl;
@@ -118,9 +132,10 @@ void Simulator::printRunningState() {
     }
 
     // ----- TERMINADOS -----
-    cout << "\n--- Terminados ---\n";
+    cout << endl;
+    centerText("Terminados");
     cout << left << setw(COL_ID) << "ID" << setw(COL_OPE) << "Ope"
-         << setw(COL_RES) << "Res" << setw(COL_BAT) << "Lote" << endl;
+         << setw(COL_RES) << "Res" << setw(COL_BAT) << "No. Lote" << endl;
 
     for (int i = 0; i <= currentBatchIndex; i++) {
         Batch* batch = batches[i];
@@ -132,6 +147,13 @@ void Simulator::printRunningState() {
             cout << left << setw(COL_ID) << job->getID() << setw(COL_OPE)
                  << job->getOperation() << setw(COL_RES) << job->getResult()
                  << setw(COL_BAT) << i + 1 << endl;
+        }
+
+        if (i < currentBatchIndex - 1) {
+            for (int j = 0; j < WIDTH; j++) {
+                cout << "-";
+            }
+            cout << endl;
         }
     }
 
@@ -145,11 +167,11 @@ void Simulator::printFinalState() {
     cout << "No. Lotes pendientes: " << pendingBatches << endl << endl;
     cout << "Todos los procesos han terminado." << endl << endl;
 
-    cout << "--- Resumen Final ---" << endl;
+    centerText("Resumen Final");
     cout << left << setw(COL_ID) << "ID" << setw(COL_OPE) << "Ope"
-         << setw(COL_RES) << "Res" << setw(COL_BAT) << "Lote" << endl;
+         << setw(COL_RES) << "Res" << setw(COL_BAT) << "No. Lote" << endl;
 
-    for (size_t i = 0; i < batches.size(); i++) {
+    for (int i = 0; i < (int)batches.size(); i++) {
         Batch* batch = batches[i];
         int jobCount = batch->getJobCount();
 
@@ -158,6 +180,13 @@ void Simulator::printFinalState() {
             cout << left << setw(COL_ID) << job->getID() << setw(COL_OPE)
                  << job->getOperation() << setw(COL_RES) << job->getResult()
                  << setw(COL_BAT) << i + 1 << endl;
+        }
+
+        if (i < currentBatchIndex - 1) {
+            for (int j = 0; j < WIDTH; j++) {
+                cout << "-";
+            }
+            cout << endl;
         }
     }
 

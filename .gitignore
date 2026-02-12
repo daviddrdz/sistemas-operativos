@@ -1,3 +1,5 @@
+main
 *.exe
 *.d
 *.o
+in.txt

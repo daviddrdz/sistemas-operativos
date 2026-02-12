@@ -4,7 +4,7 @@
 #include "Job.h"
 #include "Simulator.h"
 
-enum OperationType { ADD, SUB, MULT, DIV, POW };
+enum OperationType { ADD, SUB, MULT, DIV, POW, MOD };
 
 class Simulator;
 

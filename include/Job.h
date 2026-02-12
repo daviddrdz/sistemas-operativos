@@ -3,7 +3,7 @@
 
 #include <string>
 
-const std::string OPERATORS = "+-*/^";
+const std::string OPERATORS = "+-*/^%";
 
 class Job {
    private:

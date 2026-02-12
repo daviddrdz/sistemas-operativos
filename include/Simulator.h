@@ -6,6 +6,7 @@
 #include "Batch.h"
 #include "JobManager.h"
 
+const int WIDTH = 35;
 const int COL_NAME = 15;
 const int COL_TME = 5;
 const int COL_ID = 5;
@@ -30,9 +31,10 @@ class Simulator {
     void createBatches(int numJobs, JobManager* jobManager);
     void processBatch(int batch);
     void processBatches();
-    void render();
+    void centerText(std::string text);
     void printRunningState();
     void printFinalState();
+    void render();
 };
 
 #endif  // SIMULATOR_H
