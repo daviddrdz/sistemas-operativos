@@ -20,57 +20,81 @@ Simulator::~Simulator() {
 }
 
 bool Simulator::isValidID(int id) {
-    if (id <= 0) {
-        return false;
-    }
+    if (id <= 0) return false;
 
     size_t size = registeredIDs.size();
     for (size_t i = 0; i < size; i++) {
-        if (id == registeredIDs[i]) {
-            return false;
-        }
+        if (id == registeredIDs[i]) return false;
     }
 
     return true;
 }
 
 void Simulator::createBatches(int numJobs) {
-    JobManager jobManager;
     Batch* batch = new Batch();
     for (int i = 0; i < numJobs; i++) {
-        Console::clearScreen();
-        cout << "Proceso No. " << i + 1 << endl << endl;
-        Job* job = jobManager.captureJob(this);
+        Job* job = jobManager.generateJob(this);
         batch->insert(job);
         registeredIDs.push_back(job->getID());
         if (batch->isFull()) {
             batches.push_back(batch);
-            batch = new Batch;
+            batch = new Batch();
         }
     }
 
-    if (!batch->isEmpty()) {
+    if (!batch->isEmpty())
         batches.push_back(batch);
-    } else {
+    else
         delete batch;
-    }
 }
 
-void Simulator::processBatch(int batch) {
-    this->currentJobIndex = 0;
-    int jobCounter = batches[batch]->getJobCount();
-    while (currentJobIndex < jobCounter) {
-        Job* job = batches[batch]->getJob(currentJobIndex);
-        int estimatedTime = job->getEstimatedTime();
-        for (int j = 0; j < estimatedTime; j++) {
+void Simulator::processBatch(int batchIndex) {
+    Batch* batch = batches[batchIndex];
+    while (batch->hasActiveJobs()) {
+        Job* job = batch->getJob(0);
+        if (job->getState() == FINISHED || job->getState() == ERROR) {
+            batch->rotate();
+            continue;
+        }
+        if (job->getState() == READY) {
+            job->setState(RUNNING);
+        }
+        while (job->getState() == RUNNING) {
+            render();
             Console::sleep(1);
             job->passTime();
             globalCounter++;
-            render();
+
+            if (Console::keyPressed()) {
+                char key = tolower(Console::getKey());
+
+                if (key == 'i') {
+                    job->setState(READY);
+                    batch->rotate();
+                    break;
+                } else if (key == 'e') {
+                    job->setState(ERROR);
+                    batch->rotate();
+                    break;
+                } else if (key == 'p') {
+                    bool paused = true;
+                    while (paused) {
+                        if (Console::keyPressed() &&
+                            tolower(Console::getKey()) == 'c') {
+                            paused = false;
+                        }
+                        Console::sleep(1);
+                    }
+                }
+            }
+
+            if (job->getRemainingTime() <= 0) {
+                job->calculateResult();
+                job->setState(FINISHED);
+                batch->rotate();
+                break;
+            }
         }
-        job->calculateResult();
-        render();
-        currentJobIndex++;
     }
 }
 
@@ -110,26 +134,31 @@ void Simulator::printRunningState() {
 
     // ----- LOTE ACTUAL -----
     centerText("Lote actual");
-    cout << left << setw(COL_NAME) << "Nombre" << setw(COL_TME) << "TME"
-         << endl;
+    cout << left << setw(COL_ID) << "ID" << setw(COL_TME) << "TME"
+         << setw(COL_TME) << "TR" << endl;
 
-    for (int i = currentJobIndex + 1; i < currentJobCount; i++) {
+    for (int i = 0; i < currentJobCount; i++) {
         Job* pendingJob = currentBatch->getJob(i);
-        cout << left << setw(COL_NAME) << pendingJob->getName() << setw(COL_TME)
-             << pendingJob->getEstimatedTime() << endl;
+        if (pendingJob->getState() == READY) {
+            cout << left << setw(COL_ID) << pendingJob->getID() << setw(COL_TME)
+                 << pendingJob->getEstimatedTime() << setw(COL_TME)
+                 << pendingJob->getRemainingTime() << endl;
+        }
     }
 
     // ----- PROCESO ACTUAL -----
-    if (currentJobIndex < currentJobCount) {
-        Job* currentJob = currentBatch->getJob(currentJobIndex);
-
-        cout << endl;
-        centerText("Proceso Actual");
-        cout << "Nombre: " << currentJob->getName() << endl;
-        cout << "Ope: " << currentJob->getOperation() << endl;
-        cout << "TME: " << currentJob->getEstimatedTime() << endl;
-        cout << "TT: " << currentJob->getElapsedTime() << endl;
-        cout << "TR: " << currentJob->getRemainingTime() << endl;
+    for (int i = 0; i < currentJobCount; i++) {
+        Job* job = currentBatch->getJob(i);
+        if (job->getState() == RUNNING) {
+            cout << endl;
+            centerText("Proceso Actual");
+            cout << "ID: " << job->getID() << endl;
+            cout << "Ope: " << job->getOperation() << endl;
+            cout << "TME: " << job->getEstimatedTime() << endl;
+            cout << "TT: " << job->getElapsedTime() << endl;
+            cout << "TR: " << job->getRemainingTime() << endl;
+            break;
+        }
     }
 
     // ----- TERMINADOS -----
@@ -141,15 +170,20 @@ void Simulator::printRunningState() {
     for (int i = 0; i <= currentBatchIndex; i++) {
         Batch* batch = batches[i];
         int jobCount = batch->getJobCount();
-        int limit = (i == currentBatchIndex) ? currentJobIndex : jobCount;
-
-        for (int j = 0; j < limit; j++) {
+        for (int j = 0; j < jobCount; j++) {
             Job* job = batch->getJob(j);
-            cout << left << setw(COL_ID) << job->getID() << setw(COL_OPE)
-                 << job->getOperation() << setw(COL_RES) << job->getResult()
-                 << setw(COL_BAT) << i + 1 << endl;
+            State st = job->getState();
+            if (st == FINISHED || st == ERROR) {
+                cout << left << setw(COL_ID) << job->getID() << setw(COL_OPE)
+                     << job->getOperation() << setw(COL_RES);
+                if (st == FINISHED) {
+                    cout << job->getResult();
+                } else if (st == ERROR) {
+                    cout << "ERROR";
+                }
+                cout << setw(COL_BAT) << i + 1 << endl;
+            }
         }
-
         if (i < currentBatchIndex) {
             for (int j = 0; j < WIDTH; j++) {
                 cout << "-";
@@ -157,8 +191,10 @@ void Simulator::printRunningState() {
             cout << endl;
         }
     }
-
-    cout << endl << "Contador: " << globalCounter << endl;
+    cout << endl << "Contador: " << globalCounter << endl << endl;
+    cout << "\"I\" - Interrumpir, \"E\" - Error, \"P\" - Pausar, \"C\" - "
+            "Continuar"
+         << endl;
 }
 
 void Simulator::printFinalState() {
@@ -179,8 +215,13 @@ void Simulator::printFinalState() {
         for (int j = 0; j < jobCount; j++) {
             Job* job = batch->getJob(j);
             cout << left << setw(COL_ID) << job->getID() << setw(COL_OPE)
-                 << job->getOperation() << setw(COL_RES) << job->getResult()
-                 << setw(COL_BAT) << i + 1 << endl;
+                 << job->getOperation() << setw(COL_RES);
+            if (job->getState() == FINISHED) {
+                cout << job->getResult();
+            } else if (job->getState() == ERROR) {
+                cout << "ERROR";
+            }
+            cout << setw(COL_BAT) << i + 1 << endl;
         }
 
         if (i < currentBatchIndex - 1) {

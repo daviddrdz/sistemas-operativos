@@ -4,25 +4,27 @@
 #include <string>
 
 const std::string OPERATORS = "+-*/^%";
+enum State { READY, RUNNING, FINISHED, ERROR };
 
 class Job {
    private:
-    std::string name;
+    int id;
     std::string operation;
     int estimatedTime;
+    State state;
     int elapsedTime;
     int remainingTime;
-    int id;
     float result;
 
    public:
-    Job(std::string name, std::string operation, int tme, int id);
-    std::string getName();
+    Job(int id, std::string operation, int estimatedTime);
     std::string getOperation();
     int getEstimatedTime();
     int getElapsedTime();
     int getRemainingTime();
     int getID();
+    State getState();
+    bool setState(State state);
     void passTime();
     void calculateResult();
     float getResult();

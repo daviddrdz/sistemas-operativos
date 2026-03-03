@@ -1,19 +1,22 @@
 #ifndef JOB_MANAGER_H
 #define JOB_MANAGER_H
 
-#include "Job.hpp"
-#include "Simulator.hpp"
+#include <random>
 
-enum OperationType { ADD, SUB, MULT, DIV, POW, MOD };
+#include "Job.hpp"
 
 class Simulator;
 
+enum OperationType { ADD, SUB, MULT, DIV, POW, MOD };
+
 class JobManager {
    private:
+    std::mt19937 generator;
     bool isValidOperation(std::string operation);
 
    public:
-    Job* captureJob(Simulator* simulator);
+    JobManager();
+    Job* generateJob(Simulator* simulator);
 };
 
 #endif  // JOB_MANAGER_H

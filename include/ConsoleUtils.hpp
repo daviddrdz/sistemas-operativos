@@ -5,6 +5,8 @@ namespace Console {
 void clearScreen();
 void sleep(int sec);
 void pause();
+bool keyPressed();
+char getKey();
 }  // namespace Console
 
 #endif  // CONSOLE_UTILS_H

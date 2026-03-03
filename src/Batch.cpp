@@ -1,21 +1,33 @@
 #include "Batch.hpp"
 
-Batch::Batch() { this->jobCount = 0; }
-int Batch::getJobCount() { return this->jobCount; }
 Job* Batch::getJob(int position) {
-    if (0 <= position && position < this->jobCount) {
+    if (0 <= position && position < this->getJobCount()) {
         return batch[position];
     }
     return nullptr;
 }
 
-bool Batch::isFull() { return this->jobCount == MAX_JOBS_BATCH; }
-bool Batch::isEmpty() { return this->jobCount == 0; }
+int Batch::getJobCount() { return batch.size(); }
+bool Batch::isFull() { return batch.size() >= MAX_JOBS_BATCH; }
+bool Batch::isEmpty() { return batch.empty(); }
 
 bool Batch::insert(Job* job) {
-    if (isFull()) {
-        return false;
-    }
-    batch[jobCount++] = job;
+    if (isFull()) return false;
+    batch.push_back(job);
     return true;
+}
+
+bool Batch::hasActiveJobs() {
+    for (int i = 0; i < (int)batch.size(); i++) {
+        State currentJobState = batch[i]->getState();
+        if (currentJobState == READY || currentJobState == RUNNING) return true;
+    }
+    return false;
+}
+
+void Batch::rotate() {
+    if (batch.empty()) return;
+    Job* current = batch[0];
+    batch.erase(batch.begin());
+    batch.push_back(current);
 }

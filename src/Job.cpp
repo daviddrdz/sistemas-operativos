@@ -4,27 +4,37 @@
 
 using namespace std;
 
-Job::Job(string name, string operation, int estimatedTime, int id) {
-    this->name = name;
+Job::Job(int id, string operation, int estimatedTime) {
+    this->id = id;
     this->operation = operation;
     this->estimatedTime = estimatedTime;
+    this->state = READY;
     this->elapsedTime = 0;
     this->remainingTime = this->estimatedTime;
-    this->id = id;
     this->result = 0;
 }
 
-string Job::getName() { return this->name; }
 string Job::getOperation() { return this->operation; }
 int Job::getEstimatedTime() { return this->estimatedTime; }
 int Job::getElapsedTime() { return this->elapsedTime; }
 int Job::getRemainingTime() { return this->remainingTime; }
 int Job::getID() { return this->id; }
 float Job::getResult() { return this->result; }
+State Job::getState() { return this->state; }
+bool Job::setState(State state) {
+    if (state < READY || state > ERROR) {
+        return false;
+    } else {
+        this->state = state;
+        return true;
+    }
+}
 
 void Job::passTime() {
-    this->elapsedTime++;
-    this->remainingTime--;
+    if (remainingTime > 0) {
+        this->elapsedTime++;
+        this->remainingTime--;
+    }
 }
 
 void Job::calculateResult() {

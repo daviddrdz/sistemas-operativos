@@ -7,6 +7,11 @@
 #include "Simulator.hpp"
 using namespace std;
 
+JobManager::JobManager() {
+    std::random_device random;
+    generator.seed(random());
+}
+
 bool JobManager::isValidOperation(string operation) {
     if (operation.empty()) return false;
     int operatorIndex = -1;
@@ -14,7 +19,7 @@ bool JobManager::isValidOperation(string operation) {
     for (size_t i = 0; i < operation.size(); i++) {
         char c = operation[i];
         if (i == 0 && (c == '+' || c == '-')) continue;
-        if (string("+-*/%^").find(c) != string::npos) {
+        if (OPERATORS.find(c) != string::npos) {
             operatorCount++;
             operatorIndex = i;
         }
@@ -35,28 +40,38 @@ bool JobManager::isValidOperation(string operation) {
     return true;
 }
 
-Job* JobManager::captureJob(Simulator* simulator) {
-    string name, operation;
+Job* JobManager::generateJob(Simulator* simulator) {
+    uniform_int_distribution<> idDist(1, 999);
+    uniform_int_distribution<> numDist(-100, 100);
+    uniform_int_distribution<> baseDist(-10, 10);
+    uniform_int_distribution<> exponentDist(0, 10);
+    uniform_int_distribution<> opDist(0, (OPERATORS.size() - 1));
+    uniform_int_distribution<> timeDist(5, 10);
+
     Job* job;
-    int estimatedTime, id;
-    cout << "Nombre: ";
-    getline(cin, name);
+    int id, estimatedTime, num1, num2;
+    char operatorChar;
+    string operation;
+
     do {
-        cout << "Operation (" << OPERATORS << "): ";
-        getline(cin, operation);
-    } while (!isValidOperation(operation));
-    do {
-        cout << "Tiempo estimado (seg): ";
-        cin >> estimatedTime;
-    } while (estimatedTime <= 0);
-    do {
-        cout << "ID: ";
-        cin >> id;
-        cin.get();
+        id = idDist(generator);
     } while (!simulator->isValidID(id));
-    job = new Job(name, operation, estimatedTime, id);
-    cout << endl;
-    Console::pause();
+
+    do {
+        operatorChar = OPERATORS[opDist(generator)];
+        if (operatorChar != '^') {
+            num1 = numDist(generator);
+            num2 = numDist(generator);
+        } else {
+            num1 = baseDist(generator);
+            num2 = exponentDist(generator);
+        }
+        operation = to_string(num1) + operatorChar + to_string(num2);
+    } while (!isValidOperation(operation));
+
+    estimatedTime = timeDist(generator);
+
+    job = new Job(id, operation, estimatedTime);
 
     return job;
 }
