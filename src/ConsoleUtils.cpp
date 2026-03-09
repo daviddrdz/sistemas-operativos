@@ -4,6 +4,7 @@
 #include <conio.h>
 #else
 #include <fcntl.h>
+#include <sys/select.h>
 #include <termios.h>
 #include <unistd.h>
 #endif
@@ -36,28 +37,25 @@ bool keyPressed() {
     return _kbhit();
 #else
     termios oldt, newt;
-    int ch;
-    int oldf;
-
-    tcgetattr(STDIN_FILENO, &oldt);  // guardar configuración actual
+    tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);  // modo no canónico y sin eco
+    newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
 
-    ch = getchar();
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
 
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);  // restaurar
-    fcntl(STDIN_FILENO, F_SETFL, oldf);
+    // select revisa si hay bytes esperando sin sacarlos del buffer
+    int result = select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
 
-    if (ch != EOF) {
-        ungetc(ch, stdin);
-        return true;
-    }
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 
-    return false;
+    return (result > 0);
 #endif
 }
 
@@ -73,6 +71,7 @@ char getKey() {
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
+    // Lee el byte real de forma segura
     read(STDIN_FILENO, &ch, 1);
 
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
