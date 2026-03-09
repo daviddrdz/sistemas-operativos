@@ -4,7 +4,7 @@
 #include <string>
 
 const std::string OPERATORS = "+-*/^%";
-enum State { READY, RUNNING, FINISHED, ERROR };
+enum State { NEW, READY, RUNNING, BLOCKED, TERMINATED, ERROR };
 
 class Job {
    private:
@@ -12,22 +12,50 @@ class Job {
     std::string operation;
     int estimatedTime;
     State state;
+    float result;
+
+    int arrivalTime;
+    int completionTime;
+    int returnTime;
+    int responseTime;
+    int waitingTime;
+    int serviceTime;
+
     int elapsedTime;
     int remainingTime;
-    float result;
+    int blockedTime;
 
    public:
     Job(int id, std::string operation, int estimatedTime);
+
+    int getID();
     std::string getOperation();
     int getEstimatedTime();
+    bool setState(State state);
+    State getState();
+    float getResult();
+
+    bool setArrivalTime(int time);
+    int getArrivalTime();
+    bool setCompletionTime(int time);
+    int getCompletionTime();
+    bool setReturnTime(int time);
+    int getReturnTime();
+    bool setResponseTime(int time);
+    int getResponseTime();
+    bool setWaitingTime(int time);
+    int getWaitingTime();
+    bool setServiceTime(int time);
+    int getServiceTime();
+
     int getElapsedTime();
     int getRemainingTime();
-    int getID();
-    State getState();
-    bool setState(State state);
+    bool setBlockedTime(int time);
+    int getBlockedTime();
+
     void passTime();
+    void passBlockedTime();
     void calculateResult();
-    float getResult();
 };
 
 #endif  // JOB_H

@@ -3,33 +3,34 @@
 
 #include <vector>
 
-#include "Batch.hpp"
 #include "JobManager.hpp"
+#include "Memory.hpp"
 
-const int COL_TME = 5;
-const int COL_ID = 5;
-const int COL_OPE = 10;
-const int COL_RES = 10;
-const int COL_BAT = 10;
-const int WIDTH = COL_ID + COL_OPE + COL_RES + COL_BAT;
+const int BLOCKED_TIME = 8;
+const int W_ID = 6;
+const int W_OPE = 12;
+const int W_RES = 15;
+const int W_TIME = 9;
+
+const int WIDTH = W_ID + W_OPE + W_RES + (W_TIME * 6);
 
 class Simulator {
    private:
-    std::vector<Batch*> batches;
-    std::vector<int> registeredIDs;
+    Memory memory;
     JobManager jobManager;
-    int currentBatchIndex;
-    int currentJobIndex;
+    std::vector<int> registeredIDs;
     int globalCounter;
 
    public:
     Simulator();
-    ~Simulator();
     bool isValidID(int id);
-    void createBatches(int numJobs);
-    void processBatch(int batch);
-    void processBatches();
-    void centerText(std::string text);
+    void generateJobs(int numJobs);
+    void loadJobsToMemory();
+    void updateBlockedJobs();
+    void calculateFinalTimes(Job* job);
+    void run();
+
+    void centerText(std::string text, int width);
     void printRunningState();
     void printFinalState();
     void render();

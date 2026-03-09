@@ -13,8 +13,8 @@ int main() {
     cin >> numJobs;
     cin.get();
 
-    simulator.createBatches(numJobs);
-    simulator.processBatches();
+    simulator.generateJobs(numJobs);
+    simulator.run();
 
     return 0;
 }

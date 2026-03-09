@@ -46,7 +46,7 @@ Job* JobManager::generateJob(Simulator* simulator) {
     uniform_int_distribution<> baseDist(-10, 10);
     uniform_int_distribution<> exponentDist(0, 10);
     uniform_int_distribution<> opDist(0, (OPERATORS.size() - 1));
-    uniform_int_distribution<> timeDist(5, 10);
+    uniform_int_distribution<> timeDist(6, 20);
 
     Job* job;
     int id, estimatedTime, num1, num2;

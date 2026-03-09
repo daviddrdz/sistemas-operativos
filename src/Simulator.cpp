@@ -9,114 +9,157 @@ using namespace std;
 
 Simulator::Simulator() { this->globalCounter = 0; }
 
-Simulator::~Simulator() {
-    for (Batch* batch : batches) {
-        int jobCount = batch->getJobCount();
-        for (int j = 0; j < jobCount; j++) {
-            delete batch->getJob(j);
-        }
-        delete batch;
-    }
-}
-
 bool Simulator::isValidID(int id) {
     if (id <= 0) return false;
 
     size_t size = registeredIDs.size();
-    for (size_t i = 0; i < size; i++) {
+    for (int i = 0; i < (int)size; i++) {
         if (id == registeredIDs[i]) return false;
     }
 
     return true;
 }
 
-void Simulator::createBatches(int numJobs) {
-    Batch* batch = new Batch();
+void Simulator::generateJobs(int numJobs) {
     for (int i = 0; i < numJobs; i++) {
         Job* job = jobManager.generateJob(this);
-        batch->insert(job);
+        job->setState(NEW);
         registeredIDs.push_back(job->getID());
-        if (batch->isFull()) {
-            batches.push_back(batch);
-            batch = new Batch();
-        }
+        memory.insert(JOB_QUEUE, job);
     }
-
-    if (!batch->isEmpty())
-        batches.push_back(batch);
-    else
-        delete batch;
 }
 
-void Simulator::processBatch(int batchIndex) {
-    Batch* batch = batches[batchIndex];
-    while (batch->hasActiveJobs()) {
-        Job* job = batch->getJob(0);
-        if (job->getState() == FINISHED || job->getState() == ERROR) {
-            batch->rotate();
-            continue;
-        }
-        if (job->getState() == READY) {
-            job->setState(RUNNING);
-        }
-        while (job->getState() == RUNNING) {
-            render();
-            Console::sleep(1);
-            job->passTime();
-            globalCounter++;
+void Simulator::loadJobsToMemory() {
+    while (!memory.isActiveQueueFull() && !memory.isEmpty(JOB_QUEUE)) {
+        Job* job = memory.getJob(JOB_QUEUE, 0);
+        if (job != nullptr) job->setState(READY);
+        job->setArrivalTime(this->globalCounter);
+        memory.moveJob(JOB_QUEUE, ACTIVE_QUEUE, 0);
+    }
+}
 
-            if (Console::keyPressed()) {
-                char key = tolower(Console::getKey());
+void Simulator::updateBlockedJobs() {
+    int activeCount = memory.getJobCount(ACTIVE_QUEUE);
+    for (int i = 0; i < activeCount; i++) {
+        Job* job = memory.getJob(ACTIVE_QUEUE, i);
+        if (job->getState() == BLOCKED) {
+            job->passBlockedTime();
+            if (job->getBlockedTime() == 0) job->setState(READY);
+        }
+    }
+}
 
-                if (key == 'i') {
-                    job->setState(READY);
-                    batch->rotate();
+void Simulator::calculateFinalTimes(Job* job) {
+    job->setCompletionTime(this->globalCounter);
+    job->setServiceTime(job->getElapsedTime());
+    job->setReturnTime(job->getCompletionTime() - job->getArrivalTime());
+    job->setWaitingTime(job->getReturnTime() - job->getServiceTime());
+}
+
+void Simulator::run() {
+    while (!memory.isEmpty(JOB_QUEUE) || !memory.isEmpty(ACTIVE_QUEUE)) {
+        loadJobsToMemory();
+
+        if (!memory.isEmpty(ACTIVE_QUEUE)) {
+            bool foundReady = false;
+            int activeCount = memory.getJobCount(ACTIVE_QUEUE);
+
+            for (int i = 0; i < activeCount; i++) {
+                if (memory.getJob(ACTIVE_QUEUE, 0)->getState() == READY) {
+                    foundReady = true;
                     break;
-                } else if (key == 'e') {
-                    job->setState(ERROR);
-                    batch->rotate();
-                    break;
-                } else if (key == 'p') {
-                    bool paused = true;
-                    while (paused) {
-                        if (Console::keyPressed() &&
-                            tolower(Console::getKey()) == 'c') {
-                            paused = false;
-                        }
-                        Console::sleep(1);
-                    }
+                } else {
+                    memory.rotateActiveQueue();
                 }
             }
 
-            if (job->getRemainingTime() <= 0) {
-                job->calculateResult();
-                job->setState(FINISHED);
-                batch->rotate();
-                break;
+            if (foundReady) {
+                Job* currentJob = memory.getJob(ACTIVE_QUEUE, 0);
+
+                if (currentJob->getResponseTime() == -1) {
+                    currentJob->setResponseTime(this->globalCounter - currentJob->getArrivalTime());
+                }
+
+                currentJob->setState(RUNNING);
+
+                while (currentJob->getState() == RUNNING) {
+                    render();
+                    Console::sleep(1);
+                    currentJob->passTime();
+                    globalCounter++;
+
+                    updateBlockedJobs();
+
+                    if (Console::keyPressed()) {
+                        char key = toupper(Console::getKey());
+                        switch (key) {
+                            case 'I':
+                                currentJob->setState(BLOCKED);
+                                currentJob->setBlockedTime(BLOCKED_TIME);
+                                memory.rotateActiveQueue();
+                                break;
+                            case 'E':
+                                currentJob->setState(ERROR);
+                                calculateFinalTimes(currentJob);
+                                memory.moveJob(ACTIVE_QUEUE, TERMINATED_LOG, 0);
+                                break;
+                            case 'P':
+                                bool paused = true;
+                                while (paused) {
+                                    if (Console::keyPressed() &&
+                                        toupper(Console::getKey()) == 'C') {
+                                        paused = false;
+                                    }
+                                    Console::sleep(1);
+                                }
+                                break;
+                        }
+                    }
+
+                    if (currentJob->getState() != RUNNING) break;
+
+                    if (currentJob->getElapsedTime() == currentJob->getEstimatedTime()) {
+                        currentJob->calculateResult();
+                        currentJob->setState(TERMINATED);
+                        calculateFinalTimes(currentJob);
+                        memory.moveJob(ACTIVE_QUEUE, TERMINATED_LOG, 0);
+                        break;
+                    }
+                }
+            } else {
+                render();
+                Console::sleep(1);
+                updateBlockedJobs();
+                globalCounter++;
+
+                if (Console::keyPressed()) {
+                    char key = toupper(Console::getKey());
+                    if (key == 'P') {
+                        bool paused = true;
+                        while (paused) {
+                            if (Console::keyPressed() && toupper(Console::getKey()) == 'C') {
+                                paused = false;
+                            }
+                            Console::sleep(1);
+                        }
+                    }
+                }
             }
         }
     }
-}
 
-void Simulator::processBatches() {
-    this->currentBatchIndex = 0;
-    int totalBatches = batches.size();
-    while (currentBatchIndex < totalBatches) {
-        processBatch(currentBatchIndex);
-        currentBatchIndex++;
-    }
     render();
     Console::pause();
 }
 
-void Simulator::centerText(string text) {
+void Simulator::centerText(string text, int width) {
     int totalLength = text.length() + 2;
-    int x = (WIDTH - totalLength) / 2;
+    int x = (width - totalLength) / 2;
     for (int i = 0; i < x; i++) {
         cout << "-";
     }
     cout << " " << text << " ";
-    for (int i = 0; i < (WIDTH - x - totalLength); i++) {
+    for (int i = 0; i < (width - x - totalLength); i++) {
         cout << "-";
     }
     cout << endl;
@@ -124,119 +167,151 @@ void Simulator::centerText(string text) {
 
 void Simulator::printRunningState() {
     Console::clearScreen();
+    int width = W_ID + W_OPE + W_RES;
 
-    int pendingBatches = ((int)batches.size() - currentBatchIndex) - 1;
+    int pendingJobs = memory.getJobCount(JOB_QUEUE);
+    cout << "No. Procesos Nuevos: " << pendingJobs << endl << endl;
 
-    cout << "No. Lotes pendientes: " << pendingBatches << endl << endl;
+    int activeJobCount = memory.getJobCount(ACTIVE_QUEUE);
 
-    Batch* currentBatch = batches[currentBatchIndex];
-    int currentJobCount = currentBatch->getJobCount();
+    // ----- PROCESOS LISTOS (READY) -----
+    centerText("Procesos en memoria", width);
+    cout << left << setw(W_ID) << "ID" << setw(W_TIME) << "TME" << setw(W_TIME) << "TT" << endl;
 
-    // ----- LOTE ACTUAL -----
-    centerText("Lote actual");
-    cout << left << setw(COL_ID) << "ID" << setw(COL_TME) << "TME"
-         << setw(COL_TME) << "TR" << endl;
-
-    for (int i = 0; i < currentJobCount; i++) {
-        Job* pendingJob = currentBatch->getJob(i);
+    for (int i = 0; i < activeJobCount; i++) {
+        Job* pendingJob = memory.getJob(ACTIVE_QUEUE, i);
         if (pendingJob->getState() == READY) {
-            cout << left << setw(COL_ID) << pendingJob->getID() << setw(COL_TME)
-                 << pendingJob->getEstimatedTime() << setw(COL_TME)
-                 << pendingJob->getRemainingTime() << endl;
+            cout << left << setw(W_ID) << pendingJob->getID() << setw(W_TIME)
+                 << pendingJob->getEstimatedTime() << setw(W_TIME) << pendingJob->getElapsedTime()
+                 << endl;
         }
     }
 
-    // ----- PROCESO ACTUAL -----
-    for (int i = 0; i < currentJobCount; i++) {
-        Job* job = currentBatch->getJob(i);
+    // ----- PROCESO ACTUAL (RUNNING) -----
+    cout << endl;
+    centerText("Proceso Actual", width);
+    bool isCpuIdle = true;
+
+    for (int i = 0; i < activeJobCount; i++) {
+        Job* job = memory.getJob(ACTIVE_QUEUE, i);
         if (job->getState() == RUNNING) {
-            cout << endl;
-            centerText("Proceso Actual");
             cout << "ID: " << job->getID() << endl;
-            cout << "Ope: " << job->getOperation() << endl;
+            cout << "OPE: " << job->getOperation() << endl;
             cout << "TME: " << job->getEstimatedTime() << endl;
             cout << "TT: " << job->getElapsedTime() << endl;
-            cout << "TR: " << job->getRemainingTime() << endl;
+
+            int total = job->getEstimatedTime();
+            int elapsed = job->getElapsedTime();
+            int percentage = (total > 0) ? (elapsed * 100) / total : 0;
+            int barWidth = 20;
+            int filledWidth = (total > 0) ? (barWidth * elapsed) / total : 0;
+            cout << "[";
+            for (int p = 0; p < barWidth; ++p) {
+                if (p < filledWidth) {
+                    cout << char(254);
+                } else if (p == filledWidth && elapsed != total) {
+                    cout << ">";
+                } else {
+                    cout << " ";
+                }
+            }
+            cout << "] " << percentage << "%" << endl;
+
+            isCpuIdle = false;
             break;
+        }
+    }
+
+    if (isCpuIdle) {
+        cout << "[CPU Ocioso - Esperando procesos...]" << endl;
+    }
+
+    // ----- BLOQUEADOS (BLOCKED) -----
+    bool hasBlockedJobs = false;
+    for (int i = 0; i < activeJobCount; i++) {
+        if (memory.getJob(ACTIVE_QUEUE, i)->getState() == BLOCKED) {
+            hasBlockedJobs = true;
+            break;
+        }
+    }
+    if (hasBlockedJobs) {
+        cout << endl;
+        centerText("Procesos Bloqueados", width);
+        cout << left << setw(W_ID) << "ID" << setw(W_TIME) << "TRB" << endl;
+
+        for (int i = 0; i < activeJobCount; i++) {
+            Job* blockedJob = memory.getJob(ACTIVE_QUEUE, i);
+            if (blockedJob->getState() == BLOCKED) {
+                cout << left << setw(W_ID) << blockedJob->getID() << setw(W_TIME)
+                     << blockedJob->getBlockedTime() << endl;
+            }
         }
     }
 
     // ----- TERMINADOS -----
     cout << endl;
-    centerText("Terminados");
-    cout << left << setw(COL_ID) << "ID" << setw(COL_OPE) << "Ope"
-         << setw(COL_RES) << "Res" << setw(COL_BAT) << "No. Lote" << endl;
+    centerText("Terminados", width);
+    cout << left << setw(W_ID) << "ID" << setw(W_OPE) << "Ope" << setw(W_RES) << "Res" << endl;
 
-    for (int i = 0; i <= currentBatchIndex; i++) {
-        Batch* batch = batches[i];
-        int jobCount = batch->getJobCount();
-        for (int j = 0; j < jobCount; j++) {
-            Job* job = batch->getJob(j);
-            State st = job->getState();
-            if (st == FINISHED || st == ERROR) {
-                cout << left << setw(COL_ID) << job->getID() << setw(COL_OPE)
-                     << job->getOperation() << setw(COL_RES);
-                if (st == FINISHED) {
-                    cout << job->getResult();
-                } else if (st == ERROR) {
-                    cout << "ERROR";
-                }
-                cout << setw(COL_BAT) << i + 1 << endl;
-            }
+    int terminatedCount = memory.getJobCount(TERMINATED_LOG);
+    for (int i = 0; i < terminatedCount; i++) {
+        Job* job = memory.getJob(TERMINATED_LOG, i);
+        State st = job->getState();
+
+        cout << left << setw(W_ID) << job->getID() << setw(W_OPE) << job->getOperation()
+             << setw(W_RES);
+
+        if (st == TERMINATED) {
+            cout << job->getResult();
+        } else if (st == ERROR) {
+            cout << "ERROR";
         }
-        if (i < currentBatchIndex) {
-            for (int j = 0; j < WIDTH; j++) {
-                cout << "-";
-            }
-            cout << endl;
-        }
+        cout << endl;
     }
+
     cout << endl << "Contador: " << globalCounter << endl << endl;
-    cout << "\"I\" - Interrumpir, \"E\" - Error, \"P\" - Pausar, \"C\" - "
-            "Continuar"
-         << endl;
+    cout << "\"I\" - Interrumpir, \"E\" - Error, \"P\" - Pausar, \"C\" - Continuar";
 }
 
 void Simulator::printFinalState() {
     Console::clearScreen();
-    int pendingBatches = currentBatchIndex - (int)batches.size();
+    int width = W_ID + W_OPE + W_RES + (W_TIME * 6);
 
-    cout << "No. Lotes pendientes: " << pendingBatches << endl << endl;
     cout << "Todos los procesos han terminado." << endl << endl;
 
-    centerText("Resumen Final");
-    cout << left << setw(COL_ID) << "ID" << setw(COL_OPE) << "Ope"
-         << setw(COL_RES) << "Res" << setw(COL_BAT) << "No. Lote" << endl;
+    centerText("Resumen Final", width);
 
-    for (int i = 0; i < (int)batches.size(); i++) {
-        Batch* batch = batches[i];
-        int jobCount = batch->getJobCount();
+    cout << left << setw(W_ID) << "ID" << setw(W_OPE) << "Operacion" << setw(W_RES) << "Resultado"
+         << setw(W_TIME) << "Llegada" << setw(W_TIME) << "Fin" << setw(W_TIME) << "Retorno"
+         << setw(W_TIME) << "Resp" << setw(W_TIME) << "Espera" << setw(W_TIME) << "Servicio"
+         << endl;
 
-        for (int j = 0; j < jobCount; j++) {
-            Job* job = batch->getJob(j);
-            cout << left << setw(COL_ID) << job->getID() << setw(COL_OPE)
-                 << job->getOperation() << setw(COL_RES);
-            if (job->getState() == FINISHED) {
-                cout << job->getResult();
-            } else if (job->getState() == ERROR) {
-                cout << "ERROR";
-            }
-            cout << setw(COL_BAT) << i + 1 << endl;
+    for (int i = 0; i < (W_ID + W_OPE + W_RES + (W_TIME * 6)); i++) cout << "-";
+    cout << endl;
+
+    int terminatedCount = memory.getJobCount(TERMINATED_LOG);
+    for (int i = 0; i < terminatedCount; i++) {
+        Job* job = memory.getJob(TERMINATED_LOG, i);
+
+        cout << left << setw(W_ID) << job->getID() << setw(W_OPE) << job->getOperation();
+
+        if (job->getState() == TERMINATED) {
+            cout << setw(W_RES) << job->getResult();
+        } else if (job->getState() == ERROR) {
+            cout << setw(W_RES) << "ERROR";
         }
 
-        if (i < currentBatchIndex - 1) {
-            for (int j = 0; j < WIDTH; j++) {
-                cout << "-";
-            }
-            cout << endl;
-        }
+        cout << setw(W_TIME) << job->getArrivalTime() << setw(W_TIME) << job->getCompletionTime()
+             << setw(W_TIME) << job->getReturnTime() << setw(W_TIME) << job->getResponseTime()
+             << setw(W_TIME) << job->getWaitingTime() << setw(W_TIME) << job->getServiceTime()
+             << endl;
     }
 
     cout << endl << "Contador final: " << globalCounter << endl << endl;
 }
 
 void Simulator::render() {
-    if (currentBatchIndex < (int)batches.size()) {
+    if (!memory.isEmpty(JOB_QUEUE) || !memory.isEmpty(ACTIVE_QUEUE)) {
         printRunningState();
     } else {
         printFinalState();
