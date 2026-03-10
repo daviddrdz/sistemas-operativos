@@ -57,6 +57,7 @@ void Simulator::calculateFinalTimes(Job* job) {
 }
 
 void Simulator::run() {
+    Console::TerminalMode termMode;
     while (!memory.isEmpty(JOB_QUEUE) || !memory.isEmpty(ACTIVE_QUEUE)) {
         loadJobsToMemory();
 
@@ -106,11 +107,10 @@ void Simulator::run() {
                             case 'P':
                                 bool paused = true;
                                 while (paused) {
-                                    if (Console::keyPressed() &&
-                                        toupper(Console::getKey()) == 'C') {
-                                        paused = false;
+                                    while (Console::keyPressed()) {
+                                        if (toupper(Console::getKey()) == 'C') paused = false;
                                     }
-                                    Console::sleep(1);
+                                    if (paused) Console::sleep(1);
                                 }
                                 break;
                         }
@@ -137,10 +137,10 @@ void Simulator::run() {
                     if (key == 'P') {
                         bool paused = true;
                         while (paused) {
-                            if (Console::keyPressed() && toupper(Console::getKey()) == 'C') {
-                                paused = false;
+                            while (Console::keyPressed()) {
+                                if (toupper(Console::getKey()) == 'C') paused = false;
                             }
-                            Console::sleep(1);
+                            if (paused) Console::sleep(1);
                         }
                     }
                 }
@@ -170,7 +170,7 @@ void Simulator::printRunningState() {
     int width = W_ID + W_OPE + W_RES;
 
     int pendingJobs = memory.getJobCount(JOB_QUEUE);
-    cout << "No. Procesos Nuevos: " << pendingJobs << endl << endl;
+    cout << "No. Procesos en espera: " << pendingJobs << endl << endl;
 
     int activeJobCount = memory.getJobCount(ACTIVE_QUEUE);
 
@@ -208,7 +208,7 @@ void Simulator::printRunningState() {
             cout << "[";
             for (int p = 0; p < barWidth; ++p) {
                 if (p < filledWidth) {
-                    cout << char(254);
+                    cout << "=";
                 } else if (p == filledWidth && elapsed != total) {
                     cout << ">";
                 } else {
@@ -223,7 +223,7 @@ void Simulator::printRunningState() {
     }
 
     if (isCpuIdle) {
-        cout << "[CPU Ocioso - Esperando procesos...]" << endl;
+        cout << "[Esperando procesos...]" << endl;
     }
 
     // ----- BLOQUEADOS (BLOCKED) -----
@@ -270,7 +270,7 @@ void Simulator::printRunningState() {
     }
 
     cout << endl << "Contador: " << globalCounter << endl << endl;
-    cout << "\"I\" - Interrumpir, \"E\" - Error, \"P\" - Pausar, \"C\" - Continuar";
+    cout << "\"I\" - Interrumpir, \"E\" - Error, \"P\" - Pausar, \"C\" - Continuar" << endl;
 }
 
 void Simulator::printFinalState() {

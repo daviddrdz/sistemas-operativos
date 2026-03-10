@@ -17,11 +17,33 @@
 using namespace std;
 
 namespace Console {
+
+#ifndef _WIN32
+static termios original_termios;  // Guarda la configuración normal de Linux
+#endif
+
+// Constructor: Se ejecuta al INICIAR la simulación (Apaga el eco)
+TerminalMode::TerminalMode() {
+#ifndef _WIN32
+    tcgetattr(STDIN_FILENO, &original_termios);
+    termios newt = original_termios;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+#endif
+}
+
+// Destructor: Se ejecuta al TERMINAR la simulación (Enciende el eco)
+TerminalMode::~TerminalMode() {
+#ifndef _WIN32
+    tcsetattr(STDIN_FILENO, TCSANOW, &original_termios);
+#endif
+}
+
 void clearScreen() {
 #ifdef _WIN32
     system("cls");
 #else
-    system("clear");
+    cout << "\033[2J\033[1;1H";
 #endif
 }
 
@@ -36,12 +58,6 @@ bool keyPressed() {
 #ifdef _WIN32
     return _kbhit();
 #else
-    termios oldt, newt;
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
     struct timeval tv;
     tv.tv_sec = 0;
     tv.tv_usec = 0;
@@ -50,11 +66,7 @@ bool keyPressed() {
     FD_ZERO(&fds);
     FD_SET(STDIN_FILENO, &fds);
 
-    // select revisa si hay bytes esperando sin sacarlos del buffer
     int result = select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-
     return (result > 0);
 #endif
 }
@@ -63,19 +75,8 @@ char getKey() {
 #ifdef _WIN32
     return _getch();
 #else
-    termios oldt, newt;
     char ch;
-
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
-    // Lee el byte real de forma segura
     read(STDIN_FILENO, &ch, 1);
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-
     return ch;
 #endif
 }
