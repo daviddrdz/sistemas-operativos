@@ -104,6 +104,13 @@ void Simulator::run() {
                                 calculateFinalTimes(currentJob);
                                 memory.moveJob(ACTIVE_QUEUE, TERMINATED_LOG, 0);
                                 break;
+                            case 'N':
+                                generateJobs(1);
+                                loadJobsToMemory();
+                                break;
+                            case 'B':
+                                printBCPTable();
+                                break;
                             case 'P':
                                 bool paused = true;
                                 while (paused) {
@@ -134,14 +141,23 @@ void Simulator::run() {
 
                 if (Console::keyPressed()) {
                     char key = toupper(Console::getKey());
-                    if (key == 'P') {
-                        bool paused = true;
-                        while (paused) {
-                            while (Console::keyPressed()) {
-                                if (toupper(Console::getKey()) == 'C') paused = false;
+                    switch (key) {
+                        case 'N':
+                            generateJobs(1);
+                            loadJobsToMemory();
+                            break;
+                        case 'B':
+                            printBCPTable();
+                            break;
+                        case 'P':
+                            bool paused = true;
+                            while (paused) {
+                                while (Console::keyPressed()) {
+                                    if (toupper(Console::getKey()) == 'C') paused = false;
+                                }
+                                if (paused) Console::sleep(1);
                             }
-                            if (paused) Console::sleep(1);
-                        }
+                            break;
                     }
                 }
             }
@@ -237,13 +253,13 @@ void Simulator::printRunningState() {
     if (hasBlockedJobs) {
         cout << endl;
         centerText("Procesos Bloqueados", width);
-        cout << left << setw(W_ID) << "ID" << setw(W_TIME) << "TRB" << endl;
+        cout << left << setw(W_ID) << "ID" << setw(W_TIME) << "TTB" << endl;
 
         for (int i = 0; i < activeJobCount; i++) {
             Job* blockedJob = memory.getJob(ACTIVE_QUEUE, i);
             if (blockedJob->getState() == BLOCKED) {
                 cout << left << setw(W_ID) << blockedJob->getID() << setw(W_TIME)
-                     << blockedJob->getBlockedTime() << endl;
+                     << 8 - blockedJob->getBlockedTime() << endl;
             }
         }
     }
@@ -270,7 +286,10 @@ void Simulator::printRunningState() {
     }
 
     cout << endl << "Contador: " << globalCounter << endl << endl;
-    cout << "\"I\" - Interrumpir, \"E\" - Error, \"P\" - Pausar, \"C\" - Continuar" << endl;
+    cout
+        << "\"I\" - Interrumpir, \"E\" - Error, \"P\" - Pausar, \"C\" - Continuar, \"N\" - Generar "
+           "nuevo proceso, \"B\" - Mostrar tabla BCP"
+        << endl;
 }
 
 void Simulator::printFinalState() {
@@ -315,5 +334,108 @@ void Simulator::render() {
         printRunningState();
     } else {
         printFinalState();
+    }
+}
+
+void Simulator::printBCPTable() {
+    Console::clearScreen();
+    int bcpWidth = W_ID + 14 + W_OPE + W_RES + (W_TIME * 7);
+    centerText("Tabla de Procesos (BCP)", bcpWidth);
+
+    cout << left << setw(W_ID) << "ID" << setw(14) << "Estado" << setw(W_OPE) << "Ope"
+         << setw(W_RES) << "Res" << setw(W_TIME) << "Llegada" << setw(W_TIME) << "Fin"
+         << setw(W_TIME) << "Retorno" << setw(W_TIME) << "Espera" << setw(W_TIME) << "Serv"
+         << setw(W_TIME) << "Rest" << setw(W_TIME) << "Resp" << endl;
+
+    for (int i = 0; i < bcpWidth; i++) cout << "-";
+    cout << endl;
+
+    auto printJob = [&](Job* job) {
+        State st = job->getState();
+
+        cout << left << setw(W_ID) << job->getID();
+
+        string estadoStr = "";
+        switch (st) {
+            case NEW:
+                estadoStr = "NUEVO";
+                break;
+            case READY:
+                estadoStr = "LISTO";
+                break;
+            case RUNNING:
+                estadoStr = "EJECUCION";
+                break;
+            case BLOCKED:
+                estadoStr = "BLOQ (" + to_string(job->getBlockedTime()) + ")";
+                break;
+            case TERMINATED:
+                estadoStr = "TERMINADO";
+                break;
+            case ERROR:
+                estadoStr = "ERROR";
+                break;
+        }
+        cout << setw(14) << estadoStr;
+
+        cout << setw(W_OPE) << job->getOperation();
+
+        if (st == TERMINATED)
+            cout << setw(W_RES) << job->getResult();
+        else if (st == ERROR)
+            cout << setw(W_RES) << "ERROR";
+        else
+            cout << setw(W_RES) << "N/A";
+
+        if (st == NEW) {
+            cout << setw(W_TIME) << "N/A" << setw(W_TIME) << "N/A" << setw(W_TIME) << "N/A"
+                 << setw(W_TIME) << "N/A" << setw(W_TIME) << "N/A" << setw(W_TIME) << "N/A"
+                 << setw(W_TIME) << "N/A" << endl;
+        } else {
+            cout << setw(W_TIME) << job->getArrivalTime();
+
+            if (st == TERMINATED || st == ERROR) {
+                cout << setw(W_TIME) << job->getCompletionTime() << setw(W_TIME)
+                     << job->getReturnTime();
+            } else {
+                cout << setw(W_TIME) << "N/A" << setw(W_TIME) << "N/A";
+            }
+
+            int espera = (st == TERMINATED || st == ERROR)
+                             ? job->getWaitingTime()
+                             : (globalCounter - job->getArrivalTime() - job->getElapsedTime());
+            cout << setw(W_TIME) << espera;
+
+            cout << setw(W_TIME) << job->getElapsedTime();
+
+            if (st == TERMINATED || st == ERROR) {
+                cout << setw(W_TIME) << "N/A";
+            } else {
+                cout << setw(W_TIME) << (job->getEstimatedTime() - job->getElapsedTime());
+            }
+
+            if (job->getResponseTime() != -1) {
+                cout << setw(W_TIME) << job->getResponseTime() << endl;
+            } else {
+                cout << setw(W_TIME) << "N/A" << endl;
+            }
+        }
+    };
+
+    for (int i = 0; i < memory.getJobCount(JOB_QUEUE); i++) printJob(memory.getJob(JOB_QUEUE, i));
+    for (int i = 0; i < memory.getJobCount(ACTIVE_QUEUE); i++)
+        printJob(memory.getJob(ACTIVE_QUEUE, i));
+    for (int i = 0; i < memory.getJobCount(TERMINATED_LOG); i++)
+        printJob(memory.getJob(TERMINATED_LOG, i));
+
+    cout << endl << "Contador actual: " << globalCounter << endl;
+    cout << "\nPresione 'C' para continuar..." << endl;
+
+    bool paused = true;
+    while (paused) {
+        while (Console::keyPressed()) {
+            if (toupper(Console::getKey()) == 'C') paused = false;
+        }
+        if (paused) Console::sleep(1);
     }
 }

@@ -34,6 +34,7 @@ class Simulator {
     void printRunningState();
     void printFinalState();
     void render();
+    void printBCPTable();
 };
 
 #endif  // SIMULATOR_H
