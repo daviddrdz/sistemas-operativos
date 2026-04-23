@@ -204,6 +204,7 @@ void Simulator::printRunningState() {
     int width = W_ID + W_OPE + W_RES;
 
     int pendingJobs = memory.getJobCount(JOB_QUEUE);
+    cout << "Quantum: " << this->quantum << endl;
     cout << "No. Procesos en espera: " << pendingJobs << endl << endl;
 
     int activeJobCount = memory.getJobCount(ACTIVE_QUEUE);
