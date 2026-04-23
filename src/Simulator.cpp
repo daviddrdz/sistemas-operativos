@@ -82,12 +82,14 @@ void Simulator::run() {
                 }
 
                 currentJob->setState(RUNNING);
+                int quantumCnt = 0;
 
                 while (currentJob->getState() == RUNNING) {
                     render();
                     Console::sleep(1);
                     currentJob->passTime();
                     globalCounter++;
+                    quantumCnt++;
 
                     updateBlockedJobs();
 
@@ -132,6 +134,12 @@ void Simulator::run() {
                         memory.moveJob(ACTIVE_QUEUE, TERMINATED_LOG, 0);
                         break;
                     }
+
+                    if (quantumCnt == this->quantum) {
+                        currentJob->setState(READY);
+                        memory.rotateActiveQueue();
+                        break;
+                    }
                 }
             } else {
                 render();
@@ -166,6 +174,16 @@ void Simulator::run() {
 
     render();
     Console::pause();
+}
+
+void Simulator::askData() {
+    int n;
+    cout << "Ingrese el numero de procesos inicial: ";
+    cin >> n;
+    cout << "Ingrese el valor del quantum: ";
+    cin >> this->quantum;
+    cin.get();
+    generateJobs(n);
 }
 
 void Simulator::centerText(string text, int width) {

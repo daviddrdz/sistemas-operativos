@@ -20,6 +20,7 @@ class Simulator {
     JobManager jobManager;
     std::vector<int> registeredIDs;
     int globalCounter;
+    int quantum;
 
    public:
     Simulator();
@@ -30,6 +31,7 @@ class Simulator {
     void calculateFinalTimes(Job* job);
     void run();
 
+    void askData();
     void centerText(std::string text, int width);
     void printRunningState();
     void printFinalState();
