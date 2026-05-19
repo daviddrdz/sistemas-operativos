@@ -47,9 +47,9 @@ Job* JobManager::generateJob(Simulator* simulator) {
     uniform_int_distribution<> exponentDist(0, 10);
     uniform_int_distribution<> opDist(0, (OPERATORS.size() - 1));
     uniform_int_distribution<> timeDist(6, 20);
+    uniform_int_distribution<> sizeDist(6, 26);
 
-    Job* job;
-    int id, estimatedTime, num1, num2;
+    int id, estimatedTime, size, num1, num2;
     char operatorChar;
     string operation;
 
@@ -69,9 +69,8 @@ Job* JobManager::generateJob(Simulator* simulator) {
         operation = to_string(num1) + operatorChar + to_string(num2);
     } while (!isValidOperation(operation));
 
+    size = sizeDist(generator);
     estimatedTime = timeDist(generator);
 
-    job = new Job(id, operation, estimatedTime);
-
-    return job;
+    return new Job(id, operation, estimatedTime, size);
 }

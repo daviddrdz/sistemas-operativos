@@ -1,10 +1,65 @@
 #include "Memory.hpp"
 
+Memory::Memory() : frames(46) {
+    for(int i=0; i<46; ++i) frames[i].frameID = i;
+    for(int i=41; i<=45; ++i) {
+        frames[i].jobID = 0;
+        frames[i].usedSpace = 5;
+    }
+}
+
 Memory::~Memory() {
     for (Job* job : jobQueue) delete job;
     for (Job* job : activeQueue) delete job;
     for (Job* job : terminatedLog) delete job;
 }
+
+int Memory::getFreeFrames() {
+    int count = 0;
+    for (int i = 0; i < 41; ++i) {
+        if (frames[i].jobID == -1) {
+            count++;
+        }
+    }
+    return count;
+}
+
+void Memory::updateFramesState(int jobID, State newState) {
+    for(int i = 0; i < 41; ++i) { // Solo marcos de usuario
+        if(frames[i].jobID == jobID) {
+            frames[i].state = newState;
+        }
+    }
+}
+
+void Memory::allocateJob(Job* job) {
+    int pagesToAllocate = job->getPageCount();
+    int remainingSize = job->getSize();
+    
+    for(int i=0; i<41 && pagesToAllocate > 0; ++i) {
+        if(frames[i].jobID == -1) {
+            frames[i].jobID = job->getID();
+            frames[i].pageID = job->getPageCount() - pagesToAllocate;
+            frames[i].usedSpace = (remainingSize >= 5) ? 5 : remainingSize;
+            frames[i].state = READY;
+            
+            remainingSize -= 5;
+            pagesToAllocate--;
+        }
+    }
+}
+
+void Memory::freeFrameJobs(int jobID) {
+    for(int i=0; i<41; ++i) {
+        if(frames[i].jobID == jobID) {
+            frames[i].jobID = -1;
+            frames[i].pageID = -1;
+            frames[i].usedSpace = 0;
+        }
+    }
+}
+
+Frame& Memory::getFrame(int index) { return frames[index]; }
 
 Job* Memory::getJob(JobLocation location, int position) {
     switch (location) {
@@ -35,7 +90,7 @@ int Memory::getJobCount(JobLocation location) {
     }
 }
 
-bool Memory::isActiveQueueFull() { return activeQueue.size() >= MAX_ACTIVE_JOBS; }
+bool Memory::isActiveQueueFull() { return activeQueue.size() >= 5; }
 
 bool Memory::isEmpty(JobLocation location) {
     switch (location) {

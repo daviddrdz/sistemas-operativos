@@ -6,7 +6,7 @@
 #include "JobManager.hpp"
 #include "Memory.hpp"
 
-const int BLOCKED_TIME = 8;
+const int BLOCKED_TIME = 6;
 const int W_ID = 6;
 const int W_OPE = 12;
 const int W_RES = 15;
@@ -28,15 +28,25 @@ class Simulator {
     void generateJobs(int numJobs);
     void loadJobsToMemory();
     void updateBlockedJobs();
+
     void calculateFinalTimes(Job* job);
+    std::string formatResult(Job* job);
+    void handleRunningKeys(char key, Job* currentJob, int& quantumCnt);
+    void pauseSimulation();
+    void executeRunningJob(Job* currentJob);
+    void executeIdleCPU();
+    void processActiveQueue();
+
     void run();
 
     void askData();
+    void showPageTable();
     void centerText(std::string text, int width);
     void printRunningState();
     void printFinalState();
     void render();
     void printBCPTable();
+    void printMemoryMap();
 };
 
 #endif  // SIMULATOR_H

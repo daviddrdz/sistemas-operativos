@@ -4,20 +4,24 @@
 
 using namespace std;
 
-Job::Job(int id, string operation, int estimatedTime) {
+Job::Job(int id, string operation, int estimatedTime, int size) {
     this->id = id;
     this->operation = operation;
     this->estimatedTime = estimatedTime;
     this->state = NEW;
     this->result = 0;
+    this->size = size;
 
     this->responseTime = -1;
 
+    this->pageCount = (size + 4) / 5;
     this->elapsedTime = 0;
     this->remainingTime = this->estimatedTime;
     this->blockedTime = 0;
 }
 
+int Job::getSize() { return this->size; }
+int Job::getPageCount() { return this->pageCount; }
 int Job::getID() { return this->id; }
 string Job::getOperation() { return this->operation; }
 int Job::getEstimatedTime() { return this->estimatedTime; }

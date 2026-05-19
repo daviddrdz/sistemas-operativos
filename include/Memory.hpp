@@ -7,15 +7,29 @@
 
 enum JobLocation { JOB_QUEUE, ACTIVE_QUEUE, TERMINATED_LOG };
 
+struct Frame {
+    int frameID;
+    int jobID = -1;
+    int pageID = -1;
+    int usedSpace = 0;
+    State state = NEW;
+};
+
 class Memory {
    private:
-    static const int MAX_ACTIVE_JOBS = 5;
+    std::vector<Frame> frames;
     std::vector<Job*> jobQueue;
     std::vector<Job*> activeQueue;
     std::vector<Job*> terminatedLog;
 
    public:
+    Memory();
+    int getFreeFrames();
+    void updateFramesState(int jobID, State newState);
+    void allocateJob(Job* job);
+    void freeFrameJobs(int jobID);
     ~Memory();
+    Frame& getFrame(int index);
     Job* getJob(JobLocation location, int position);
     int getJobCount(JobLocation location);
     bool isActiveQueueFull();

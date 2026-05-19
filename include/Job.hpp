@@ -13,6 +13,8 @@ class Job {
     int estimatedTime;
     State state;
     float result;
+    int size;
+    int pageCount;
 
     int arrivalTime;
     int completionTime;
@@ -26,7 +28,7 @@ class Job {
     int blockedTime;
 
    public:
-    Job(int id, std::string operation, int estimatedTime);
+    Job(int id, std::string operation, int estimatedTime, int size);
 
     int getID();
     std::string getOperation();
@@ -34,6 +36,8 @@ class Job {
     bool setState(State state);
     State getState();
     float getResult();
+    int getSize();
+    int getPageCount();
 
     bool setArrivalTime(int time);
     int getArrivalTime();
