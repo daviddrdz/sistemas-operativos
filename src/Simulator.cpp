@@ -220,34 +220,38 @@ void Simulator::run() {
 
 void Simulator::showPageTable() {
     Console::clearScreen();
-    int tableWidth = 60;
-    centerText("TABLA DE PAGINAS Y ESTADO DE MEMORIA", tableWidth);
-    
-    cout << left << setw(10) << "Marco" 
-         << setw(15) << "Espacio" 
-         << setw(15) << "Proceso" 
-         << setw(10) << "Pagina" << endl;
-    cout << string(tableWidth, '-') << endl;
+    int totalWidth = 74;
+    centerText("TABLA DE PAGINAS Y ESTADO DE MEMORIA", totalWidth);
+    // Encabezado doble balanceado en paralelo
+    cout << "| Mco | Espacio | Proceso | Pag |  | Mco | Espacio | Proceso | Pag |" << endl;
+    cout << string(totalWidth, '-') << endl;
 
     string freeFrames = "";
 
-    for (int i = 0; i < 46; i++) {
-        Frame& f = memory.getFrame(i); 
+    // Iteramos hasta 23 para imprimir dos columnas en paralelo (0-22 y 23-45)
+    for (int i = 0; i < 23; i++) {
+        auto printFrameRow = [&](int idx) {
+            Frame& f = memory.getFrame(idx); 
+            cout << "| " << setw(3) << left << f.frameID << " | ";
+            cout << setw(7) << left << (to_string(f.usedSpace) + "/5") << " | ";
 
-        cout << left << setw(10) << f.frameID;
-        cout << setw(15) << (to_string(f.usedSpace) + "/5");
+            if (f.jobID == 0) {
+                cout << setw(7) << left << "S.O." << " | " << setw(3) << left << "-" << " |";
+            } else if (f.jobID == -1) {
+                cout << setw(7) << left << "Libre" << " | " << setw(3) << left << "-" << " |";
+                freeFrames += to_string(f.frameID) + " ";
+            } else {
+                cout << setw(7) << left << f.jobID << " | " << setw(3) << left << f.pageID << " |";
+            }
+        };
 
-        if (f.jobID == 0) {
-            cout << setw(15) << "S.O." << setw(10) << "-" << endl;
-        } else if (f.jobID == -1) {
-            cout << setw(15) << "Libre" << setw(10) << "-" << endl;
-            freeFrames += to_string(f.frameID) + " ";
-        } else {
-            cout << setw(15) << f.jobID << setw(10) << f.pageID << endl;
-        }
+        printFrameRow(i);      // Mitad izquierda (0 a 22)
+        cout << "  ";          // Separador central
+        printFrameRow(i + 23); // Mitad derecha (23 a 45)
+        cout << endl;
     }
 
-    cout << string(tableWidth, '-') << endl;
+    cout << string(totalWidth, '-') << endl;
     cout << "Marcos Libres: " << (freeFrames.empty() ? "Ninguno" : freeFrames) << endl;
     cout << "\nPresione 'C' para continuar la simulacion..." << endl;
 
