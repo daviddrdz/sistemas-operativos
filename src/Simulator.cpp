@@ -65,6 +65,7 @@ void Simulator::calculateFinalTimes(Job* job) {
 // Función auxiliar para formatear los resultados a 2 decimales limpios
 string Simulator::formatResult(Job* job) {
     if (job->getState() == ERROR) return "ERROR";
+    if (job->getState() != TERMINATED) return "N/A";
     stringstream ss;
     ss << fixed << setprecision(2) << job->getResult();
     return ss.str();
@@ -72,7 +73,7 @@ string Simulator::formatResult(Job* job) {
 
 // --- SUB-MÉTODOS EXTRAÍDOS PARA CONTROL DE EJECUCIÓN (REFACTORIZACIÓN) ---
 
-void Simulator::handleRunningKeys(char key, Job* currentJob, int& quantumCnt) {
+void Simulator::handleRunningKeys(char key, Job* currentJob) {
     switch (key) {
         case 'I':
             currentJob->setState(BLOCKED);
@@ -132,7 +133,7 @@ void Simulator::executeRunningJob(Job* currentJob) {
 
         if (Console::keyPressed()) {
             char key = toupper(Console::getKey());
-            handleRunningKeys(key, currentJob, quantumCnt);
+            handleRunningKeys(key, currentJob);
         }
 
         if (currentJob->getState() != RUNNING) break;
@@ -173,6 +174,9 @@ void Simulator::executeIdleCPU() {
                 break;
             case 'P':
                 pauseSimulation();
+                break;
+            case 'T':
+                showPageTable();
                 break;
         }
     }

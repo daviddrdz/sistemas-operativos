@@ -1,9 +1,17 @@
 #include "Memory.hpp"
 
 Memory::Memory() : frames(46) {
-    for(int i=0; i<46; ++i) frames[i].frameID = i;
-    for(int i=41; i<=45; ++i) {
-        frames[i].jobID = 0;
+    // 1. Inicializar absolutamente todos los marcos como libres por defecto
+    for(int i = 0; i < 46; ++i) {
+        frames[i].frameID = i;
+        frames[i].jobID = -1;      // -1 significa cuadro totalmente libre
+        frames[i].pageID = -1;
+        frames[i].usedSpace = 0;
+    }
+    
+    // 2. Ahora sí, reservar los últimos 5 marcos de forma fija para el S.O.
+    for(int i = 41; i <= 45; ++i) {
+        frames[i].jobID = 0;       // 0 identifica al Sistema Operativo
         frames[i].usedSpace = 5;
     }
 }
@@ -113,11 +121,8 @@ bool Memory::insert(JobLocation location, Job* job) {
             jobQueue.push_back(job);
             return true;
         case ACTIVE_QUEUE:
-            if (!isActiveQueueFull()) {
-                activeQueue.push_back(job);
-                return true;
-            }
-            return false;
+            activeQueue.push_back(job);
+            return true;
         case TERMINATED_LOG:
             terminatedLog.push_back(job);
             return true;

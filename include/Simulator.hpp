@@ -31,7 +31,7 @@ class Simulator {
 
     void calculateFinalTimes(Job* job);
     std::string formatResult(Job* job);
-    void handleRunningKeys(char key, Job* currentJob, int& quantumCnt);
+    void handleRunningKeys(char key, Job* currentJob);
     void pauseSimulation();
     void executeRunningJob(Job* currentJob);
     void executeIdleCPU();
