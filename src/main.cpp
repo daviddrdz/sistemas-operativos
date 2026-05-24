@@ -1,14 +1,12 @@
-#include <iostream>
-
 #include "Simulator.hpp"
 
 using namespace std;
 
 int main() {
-    Simulator simulator;
+    Simulator sim;
 
-    simulator.askData();
-    simulator.run();
+    sim.askData();
+    sim.run();
 
     return 0;
 }
