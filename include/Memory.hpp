@@ -5,7 +5,7 @@
 
 #include "Job.hpp"
 
-enum JobLocation { JOB_QUEUE, ACTIVE_QUEUE, TERMINATED_LOG };
+enum JobLocation { JOB_QUEUE, ACTIVE_QUEUE, SUSPENDED_QUEUE, TERMINATED_LOG};
 
 struct Frame {
     int frameID;
@@ -20,6 +20,7 @@ class Memory {
     std::vector<Frame> frames;
     std::vector<Job*> jobQueue;
     std::vector<Job*> activeQueue;
+    std::vector<Job*> suspendedQueue;
     std::vector<Job*> terminatedLog;
 
    public:

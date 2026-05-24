@@ -1,17 +1,15 @@
 #include "Memory.hpp"
 
 Memory::Memory() : frames(46) {
-    // 1. Inicializar absolutamente todos los marcos como libres por defecto
     for(int i = 0; i < 46; ++i) {
         frames[i].frameID = i;
-        frames[i].jobID = -1;      // -1 significa cuadro totalmente libre
+        frames[i].jobID = -1;      
         frames[i].pageID = -1;
         frames[i].usedSpace = 0;
     }
     
-    // 2. Ahora sí, reservar los últimos 5 marcos de forma fija para el S.O.
     for(int i = 41; i <= 45; ++i) {
-        frames[i].jobID = 0;       // 0 identifica al Sistema Operativo
+        frames[i].jobID = 0;       
         frames[i].usedSpace = 5;
     }
 }
@@ -33,7 +31,7 @@ int Memory::getFreeFrames() {
 }
 
 void Memory::updateFramesState(int jobID, State newState) {
-    for(int i = 0; i < 41; ++i) { // Solo marcos de usuario
+    for(int i = 0; i < 41; ++i) {
         if(frames[i].jobID == jobID) {
             frames[i].state = newState;
         }
@@ -77,6 +75,9 @@ Job* Memory::getJob(JobLocation location, int position) {
         case ACTIVE_QUEUE:
             if (0 <= position && position < (int)activeQueue.size()) return activeQueue[position];
             break;
+        case SUSPENDED_QUEUE:
+            if (0 <= position && position < (int)suspendedQueue.size()) return suspendedQueue[position];
+            break;
         case TERMINATED_LOG:
             if (0 <= position && position < (int)terminatedLog.size())
                 return terminatedLog[position];
@@ -87,14 +88,11 @@ Job* Memory::getJob(JobLocation location, int position) {
 
 int Memory::getJobCount(JobLocation location) {
     switch (location) {
-        case JOB_QUEUE:
-            return static_cast<int>(jobQueue.size());
-        case ACTIVE_QUEUE:
-            return static_cast<int>(activeQueue.size());
-        case TERMINATED_LOG:
-            return static_cast<int>(terminatedLog.size());
-        default:
-            return 0;
+        case JOB_QUEUE: return static_cast<int>(jobQueue.size());
+        case ACTIVE_QUEUE: return static_cast<int>(activeQueue.size());
+        case SUSPENDED_QUEUE: return static_cast<int>(suspendedQueue.size());
+        case TERMINATED_LOG: return static_cast<int>(terminatedLog.size());
+        default: return 0;
     }
 }
 
@@ -102,14 +100,11 @@ bool Memory::isActiveQueueFull() { return activeQueue.size() >= 5; }
 
 bool Memory::isEmpty(JobLocation location) {
     switch (location) {
-        case JOB_QUEUE:
-            return jobQueue.empty();
-        case ACTIVE_QUEUE:
-            return activeQueue.empty();
-        case TERMINATED_LOG:
-            return terminatedLog.empty();
-        default:
-            return true;
+        case JOB_QUEUE: return jobQueue.empty();
+        case ACTIVE_QUEUE: return activeQueue.empty();
+        case SUSPENDED_QUEUE: return suspendedQueue.empty();
+        case TERMINATED_LOG: return terminatedLog.empty();
+        default: return true;
     }
 }
 
@@ -122,6 +117,9 @@ bool Memory::insert(JobLocation location, Job* job) {
             return true;
         case ACTIVE_QUEUE:
             activeQueue.push_back(job);
+            return true;
+        case SUSPENDED_QUEUE:
+            suspendedQueue.push_back(job);
             return true;
         case TERMINATED_LOG:
             terminatedLog.push_back(job);
@@ -142,6 +140,9 @@ bool Memory::moveJob(JobLocation origin, JobLocation destination, int position) 
                 break;
             case ACTIVE_QUEUE:
                 activeQueue.erase(activeQueue.begin() + position);
+                break;
+            case SUSPENDED_QUEUE:
+                suspendedQueue.erase(suspendedQueue.begin() + position);
                 break;
             case TERMINATED_LOG:
                 terminatedLog.erase(terminatedLog.begin() + position);

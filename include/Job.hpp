@@ -4,7 +4,7 @@
 #include <string>
 
 const std::string OPERATORS = "+-*/^%";
-enum State { NEW, READY, RUNNING, BLOCKED, TERMINATED, ERROR };
+enum State { NEW, READY, RUNNING, BLOCKED, SUSPENDED, TERMINATED, ERROR};
 
 class Job {
    private:

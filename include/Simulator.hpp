@@ -6,6 +6,8 @@
 #include "JobManager.hpp"
 #include "Memory.hpp"
 
+const std::string SUSPENDED_FILE = "suspended.txt";
+
 const int BLOCKED_TIME = 6;
 const int W_ID = 6;
 const int W_OPE = 12;
@@ -28,6 +30,8 @@ class Simulator {
     void generateJobs(int numJobs);
     void loadJobsToMemory();
     void updateBlockedJobs();
+    void suspendJob();
+    void returnJob();
 
     void calculateFinalTimes(Job* job);
     std::string formatResult(Job* job);

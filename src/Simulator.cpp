@@ -2,13 +2,18 @@
 
 #include <iomanip>
 #include <iostream>
-#include <sstream> // Agregado para el formateo de decimales
+#include <sstream> 
+#include <fstream>
 
 #include "ConsoleUtils.hpp"
 
 using namespace std;
 
-Simulator::Simulator() { this->globalCounter = 0; }
+Simulator::Simulator() { 
+    this->globalCounter = 0;
+    ofstream file(SUSPENDED_FILE, ios::trunc);
+    if(file.is_open()) file.close();
+}
 
 bool Simulator::isValidID(int id) {
     if (id <= 0) return false;
@@ -55,6 +60,41 @@ void Simulator::updateBlockedJobs() {
     }
 }
 
+void Simulator::suspendJob() {
+    int activeCount = memory.getJobCount(ACTIVE_QUEUE);
+    int blockedIndex = -1;
+    for(int i = 0; i < activeCount; ++i){
+        if(memory.getJob(ACTIVE_QUEUE, i)->getState() == BLOCKED) {
+            blockedIndex = i;
+            break;
+        }
+    }
+    if(blockedIndex != -1) {
+        Job* jobToSuspend = memory.getJob(ACTIVE_QUEUE, blockedIndex);
+        jobToSuspend->setState(SUSPENDED);
+        memory.freeFrameJobs(jobToSuspend->getID());
+        ofstream file(SUSPENDED_FILE, ios::app);
+        if(file.is_open()) {
+            file << "ID: " << jobToSuspend->getID()
+                << " | OPE: " << jobToSuspend->getOperation()
+                << " | TAM: " << jobToSuspend->getSize() << "\n";
+            file.close();
+        }
+        memory.moveJob(ACTIVE_QUEUE, SUSPENDED_QUEUE, blockedIndex);
+    }
+}
+
+void Simulator::returnJob() {
+    if(!memory.isEmpty(SUSPENDED_QUEUE)) {
+        Job* returnJob = memory.getJob(SUSPENDED_QUEUE, 0);
+        if(memory.getFreeFrames() >= returnJob->getPageCount()) {
+            returnJob->setState(READY);
+            memory.allocateJob(returnJob);
+            memory.moveJob(SUSPENDED_QUEUE, ACTIVE_QUEUE, 0);
+        }
+    }
+}
+
 void Simulator::calculateFinalTimes(Job* job) {
     job->setCompletionTime(this->globalCounter);
     job->setServiceTime(job->getElapsedTime());
@@ -62,7 +102,6 @@ void Simulator::calculateFinalTimes(Job* job) {
     job->setWaitingTime(job->getReturnTime() - job->getServiceTime());
 }
 
-// Función auxiliar para formatear los resultados a 2 decimales limpios
 string Simulator::formatResult(Job* job) {
     if (job->getState() == ERROR) return "ERROR";
     if (job->getState() != TERMINATED) return "N/A";
@@ -70,8 +109,6 @@ string Simulator::formatResult(Job* job) {
     ss << fixed << setprecision(2) << job->getResult();
     return ss.str();
 }
-
-// --- SUB-MÉTODOS EXTRAÍDOS PARA CONTROL DE EJECUCIÓN (REFACTORIZACIÓN) ---
 
 void Simulator::handleRunningKeys(char key, Job* currentJob) {
     switch (key) {
@@ -99,6 +136,12 @@ void Simulator::handleRunningKeys(char key, Job* currentJob) {
             break;
         case 'T':
             showPageTable();
+            break;
+        case 'S':
+            suspendJob();
+            break;
+        case 'R':
+            returnJob();
             break;
     }
 }
@@ -164,21 +207,7 @@ void Simulator::executeIdleCPU() {
 
     if (Console::keyPressed()) {
         char key = toupper(Console::getKey());
-        switch (key) {
-            case 'N':
-                generateJobs(1);
-                loadJobsToMemory();
-                break;
-            case 'B':
-                printBCPTable();
-                break;
-            case 'P':
-                pauseSimulation();
-                break;
-            case 'T':
-                showPageTable();
-                break;
-        }
+        handleRunningKeys(key, nullptr);
     }
 }
 
@@ -204,11 +233,13 @@ void Simulator::processActiveQueue() {
 
 void Simulator::run() {
     Console::TerminalMode termMode;
-    while (!memory.isEmpty(JOB_QUEUE) || !memory.isEmpty(ACTIVE_QUEUE)) {
+    while (!memory.isEmpty(JOB_QUEUE) || !memory.isEmpty(ACTIVE_QUEUE) || !memory.isEmpty(SUSPENDED_QUEUE)) {
         loadJobsToMemory();
 
         if (!memory.isEmpty(ACTIVE_QUEUE)) {
             processActiveQueue();
+        } else if(!memory.isEmpty(SUSPENDED_QUEUE)) {
+            executeIdleCPU();
         }
     }
 
@@ -216,19 +247,15 @@ void Simulator::run() {
     Console::pause();
 }
 
-// --- MÉTODOS DE VISTAS Y TABLAS CON DISEÑO AJUSTADO ---
-
 void Simulator::showPageTable() {
     Console::clearScreen();
     int totalWidth = 74;
     centerText("TABLA DE PAGINAS Y ESTADO DE MEMORIA", totalWidth);
-    // Encabezado doble balanceado en paralelo
     cout << "| Mco | Espacio | Proceso | Pag |  | Mco | Espacio | Proceso | Pag |" << endl;
     cout << string(totalWidth, '-') << endl;
 
     string freeFrames = "";
 
-    // Iteramos hasta 23 para imprimir dos columnas en paralelo (0-22 y 23-45)
     for (int i = 0; i < 23; i++) {
         auto printFrameRow = [&](int idx) {
             Frame& f = memory.getFrame(idx); 
@@ -245,9 +272,9 @@ void Simulator::showPageTable() {
             }
         };
 
-        printFrameRow(i);      // Mitad izquierda (0 a 22)
-        cout << "  ";          // Separador central
-        printFrameRow(i + 23); // Mitad derecha (23 a 45)
+        printFrameRow(i);      
+        cout << "  ";          
+        printFrameRow(i + 23); 
         cout << endl;
     }
 
@@ -282,8 +309,11 @@ void Simulator::printRunningState() {
     int width = W_ID + W_OPE + W_RES;
 
     int pendingJobs = memory.getJobCount(JOB_QUEUE);
+    int suspendedJobs = memory.getJobCount(SUSPENDED_QUEUE);
+
     cout << "Quantum: " << this->quantum << " | Contador Global: " << globalCounter << endl;
     cout << "No. Procesos en cola de Nuevos: " << pendingJobs << endl;
+    cout << "No. Procesos en estado Suspendido: " << suspendedJobs << endl;
 
     if (pendingJobs > 0) {
         Job* next = memory.getJob(JOB_QUEUE, 0);
@@ -291,9 +321,15 @@ void Simulator::printRunningState() {
     } else {
         cout << "PROXIMO A ENTRAR -> Ninguno" << endl;
     }
+
+    if (suspendedJobs > 0) {
+        Job* nextSuspended = memory.getJob(SUSPENDED_QUEUE, 0);
+        cout << "PROXIMO A REGRESAR (Suspendido) -> ID: " << nextSuspended->getID() << " | Tam: " << nextSuspended->getSize() << endl;
+    } else {
+        cout << "PROXIMO A REGRESAR (Suspendido) -> Ninguno" << endl;
+    }
     cout << endl;
 
-    // Imprime el mapa de memoria corregido (Ancho total exacto: 72 caracteres)
     printMemoryMap(); 
     cout << endl;
 
@@ -317,11 +353,10 @@ void Simulator::printRunningState() {
     int terminatedCount = memory.getJobCount(TERMINATED_LOG);
     for (int i = 0; i < terminatedCount; i++) {
         Job* job = memory.getJob(TERMINATED_LOG, i);
-        // Ajustado para mostrar el resultado formateado a 2 decimales
         cout << left << setw(W_ID) << job->getID() << setw(W_OPE) << job->getOperation() << setw(W_RES) << formatResult(job) << endl;
     }
 
-    cout << "\n\"I\"-Interr, \"E\"-Error, \"P\"-Pausa, \"N\"-Nuevo, \"B\"-BCP, \"T\"-Tabla Paginas" << endl;
+    cout << "\n\"I\"-Interr, \"E\"-Error, \"P\"-Pausa, \"N\"-Nuevo, \"B\"-BCP, \"T\"-Tabla Paginas, \"S\"-Susp, \"R\"-Regresar" << endl;
 }
 
 void Simulator::printFinalState() {
@@ -352,7 +387,7 @@ void Simulator::printFinalState() {
 }
 
 void Simulator::render() {
-    if (!memory.isEmpty(JOB_QUEUE) || !memory.isEmpty(ACTIVE_QUEUE)) {
+    if (!memory.isEmpty(JOB_QUEUE) || !memory.isEmpty(ACTIVE_QUEUE) || !memory.isEmpty(SUSPENDED_QUEUE)) {
         printRunningState();
     } else {
         printFinalState();
@@ -384,6 +419,7 @@ void Simulator::printBCPTable() {
             case BLOCKED:    estadoStr = "BLOQ (" + to_string(job->getBlockedTime()) + ")"; break;
             case TERMINATED: estadoStr = "TERMINADO"; break;
             case ERROR:      estadoStr = "ERROR"; break;
+            case SUSPENDED:  estadoStr = "SUSPENDIDO"; break;
         }
         cout << setw(14) << estadoStr << setw(W_OPE) << job->getOperation() << setw(W_RES) << formatResult(job);
 
@@ -421,6 +457,7 @@ void Simulator::printBCPTable() {
 
     for (int i = 0; i < memory.getJobCount(JOB_QUEUE); i++) printJob(memory.getJob(JOB_QUEUE, i));
     for (int i = 0; i < memory.getJobCount(ACTIVE_QUEUE); i++) printJob(memory.getJob(ACTIVE_QUEUE, i));
+    for (int i = 0; i < memory.getJobCount(SUSPENDED_QUEUE); i++) printJob(memory.getJob(SUSPENDED_QUEUE, i));
     for (int i = 0; i < memory.getJobCount(TERMINATED_LOG); i++) printJob(memory.getJob(TERMINATED_LOG, i));
 
     cout << endl << "Contador actual: " << globalCounter << endl;
@@ -430,34 +467,37 @@ void Simulator::printBCPTable() {
 }
 
 void Simulator::printMemoryMap() {
-    int totalWidth = 74;
+    int totalWidth = 91; 
     centerText("ESTADO DE LA MEMORIA (46 MARCOS)", totalWidth);
-    // Doble encabezado perfectamente balanceado para las dos columnas impresas en paralelo
-    cout << "| Mco | Proceso | Pagina | Espacio |  | Mco | Proceso | Pagina | Espacio |" << endl;
+    
+    cout << "| Mco | Proceso | Pag | Uso |  | Mco | Proceso | Pag | Uso |  | Mco | Proceso | Pag | Uso |" << endl;
     cout << string(totalWidth, '-') << endl;
 
-    for (int i = 0; i < 23; i++) {
+    for (int i = 0; i < 16; i++) {
         auto printFrame = [&](int idx) {
-            Frame& f = memory.getFrame(idx);
+            if (idx >= 46) {
+                cout << "|     |         |     |     |"; 
+                return;
+            }
+            
+            Frame& f = memory.getFrame(idx); 
             cout << "| " << setw(3) << left << idx << " | ";
             
             if (f.jobID == 0) {
-                cout << setw(7) << left << "S.O." << " | " << setw(6) << left << "-" << " | " << setw(7) << left << "5/5";
+                cout << setw(7) << left << "S.O." << " | " << setw(3) << left << "-" << " | " << setw(3) << left << "5/5" << " |";
             } else if (f.jobID == -1) {
-                cout << setw(7) << left << "Libre" << " | " << setw(6) << "-" << " | " << setw(7) << "0/5";
+                cout << setw(7) << left << "Libre" << " | " << setw(3) << left << "-" << " | " << setw(3) << left << "0/5" << " |";
             } else {
                 string etiqueta = (f.state == RUNNING) ? "E" : (f.state == BLOCKED) ? "B" : "L";
-                // Combinamos el ID y estado en un string antes de aplicar el formato fijo
                 string procStr = to_string(f.jobID) + "(" + etiqueta + ")";
-                cout << setw(7) << left << procStr << " | " << setw(6) << left << f.pageID << " | " << setw(7) << left << (to_string(f.usedSpace) + "/5");
+                
+                cout << setw(7) << left << procStr << " | " << setw(3) << left << f.pageID << " | " << setw(3) << left << (to_string(f.usedSpace) + "/5") << " |";
             }
-            cout << " |";
         };
 
-        printFrame(i);      // Columna izquierda (Marcos 0-22)
-        cout << "  ";       // Espaciador central
-        printFrame(i + 23); // Columna derecha (Marcos 23-45)
-        cout << endl;
+        printFrame(i);      cout << "  ";
+        printFrame(i + 16); cout << "  ";
+        printFrame(i + 32); cout << endl;
     }
     cout << string(totalWidth, '-') << endl;
 }
