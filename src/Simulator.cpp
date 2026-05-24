@@ -111,6 +111,8 @@ string Simulator::formatResult(Job* job) {
 }
 
 void Simulator::handleRunningKeys(char key, Job* currentJob) {
+    if(currentJob == nullptr && (key == 'I' || key == 'E')) return;
+
     switch (key) {
         case 'I':
             currentJob->setState(BLOCKED);

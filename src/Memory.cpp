@@ -17,6 +17,7 @@ Memory::Memory() : frames(46) {
 Memory::~Memory() {
     for (Job* job : jobQueue) delete job;
     for (Job* job : activeQueue) delete job;
+    for (Job* job : suspendedQueue) delete job;
     for (Job* job : terminatedLog) delete job;
 }
 
