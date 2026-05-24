@@ -26,7 +26,7 @@ int Job::getID() { return this->id; }
 string Job::getOperation() { return this->operation; }
 int Job::getEstimatedTime() { return this->estimatedTime; }
 bool Job::setState(State state) {
-    if (state < READY || state > ERROR) {
+    if (state < NEW || state > ERROR) {
         return false;
     } else {
         this->state = state;

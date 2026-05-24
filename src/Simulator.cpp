@@ -306,41 +306,48 @@ void Simulator::centerText(string text, int width) {
 
 void Simulator::printRunningState() {
     Console::clearScreen();
-    int width = W_ID + W_OPE + W_RES;
+    
+    // Ancho unificado a 43 para lograr la simetría perfecta
+    int widthTop = 43; 
+    int widthActual = 43; 
+    int widthTerminados = 43; 
 
     int pendingJobs = memory.getJobCount(JOB_QUEUE);
     int suspendedJobs = memory.getJobCount(SUSPENDED_QUEUE);
 
-    cout << "Quantum: " << this->quantum << " | Contador Global: " << globalCounter << endl;
-    cout << "No. Procesos en cola de Nuevos: " << pendingJobs << endl;
-    cout << "No. Procesos en estado Suspendido: " << suspendedJobs << endl;
+    string proxNuevo = (pendingJobs > 0) 
+        ? "ID: " + to_string(memory.getJob(JOB_QUEUE, 0)->getID()) + " | Tam: " + to_string(memory.getJob(JOB_QUEUE, 0)->getSize()) 
+        : "Ninguno";
+        
+    string proxSusp = (suspendedJobs > 0) 
+        ? "ID: " + to_string(memory.getJob(SUSPENDED_QUEUE, 0)->getID()) + " | Tam: " + to_string(memory.getJob(SUSPENDED_QUEUE, 0)->getSize()) 
+        : "Ninguno";
 
-    if (pendingJobs > 0) {
-        Job* next = memory.getJob(JOB_QUEUE, 0);
-        cout << "PROXIMO A ENTRAR -> ID: " << next->getID() << " | Tam: " << next->getSize() << endl;
-    } else {
-        cout << "PROXIMO A ENTRAR -> Ninguno" << endl;
-    }
+    cout << "Contador Global: " << to_string(globalCounter) << endl;
+    cout << "Quantum: " << to_string(this->quantum) << endl << endl;
 
-    if (suspendedJobs > 0) {
-        Job* nextSuspended = memory.getJob(SUSPENDED_QUEUE, 0);
-        cout << "PROXIMO A REGRESAR (Suspendido) -> ID: " << nextSuspended->getID() << " | Tam: " << nextSuspended->getSize() << endl;
-    } else {
-        cout << "PROXIMO A REGRESAR (Suspendido) -> Ninguno" << endl;
-    }
-    cout << endl;
+    centerText("Procesos en espera", widthTop);
+        cout << left << setw(21) << ("Nuevos: " + to_string(pendingJobs)) 
+         << "| Suspendidos: " << suspendedJobs << endl << endl;
+
+    centerText("Proximos a entrar", widthTop);
+    cout << "Nuevo      -> " << proxNuevo << endl;
+    cout << "Suspendido -> " << proxSusp << endl << endl;
 
     printMemoryMap(); 
     cout << endl;
 
     int activeJobCount = memory.getJobCount(ACTIVE_QUEUE);
 
-    centerText("Proceso Actual", width);
+    centerText("Proceso Actual", widthActual);
     bool isCpuIdle = true;
     for (int i = 0; i < activeJobCount; i++) {
         Job* job = memory.getJob(ACTIVE_QUEUE, i);
         if (job->getState() == RUNNING) {
-            cout << "ID: " << job->getID() << " | OPE: " << job->getOperation() << " | TME: " << job->getEstimatedTime() << " | TT: " << job->getElapsedTime() << endl;
+            cout << "ID: " << setw(2) << left << job->getID() 
+                 << " | OPE: " << setw(10) << left << job->getOperation() 
+                 << " | TME: " << setw(2) << left << job->getEstimatedTime() 
+                 << " | TT: " << setw(2) << left << job->getElapsedTime() << endl;
             isCpuIdle = false; 
             break;
         }
@@ -348,15 +355,56 @@ void Simulator::printRunningState() {
     if (isCpuIdle) cout << "[CPU en espera (IDLE)]" << endl;
 
     cout << endl;
-    centerText("Terminados", width);
-    cout << left << setw(W_ID) << "ID" << setw(W_OPE) << "Ope" << setw(W_RES) << "Res" << endl;
+    
+    centerText("Terminados", widthTerminados);
+    cout << left << setw(8) << "ID" << setw(18) << "Operacion" << setw(17) << "Resultado" << endl;
+    
     int terminatedCount = memory.getJobCount(TERMINATED_LOG);
     for (int i = 0; i < terminatedCount; i++) {
         Job* job = memory.getJob(TERMINATED_LOG, i);
-        cout << left << setw(W_ID) << job->getID() << setw(W_OPE) << job->getOperation() << setw(W_RES) << formatResult(job) << endl;
+        cout << left << setw(8) << job->getID() 
+             << setw(18) << job->getOperation() 
+             << setw(17) << formatResult(job) << endl;
     }
 
     cout << "\n\"I\"-Interr, \"E\"-Error, \"P\"-Pausa, \"N\"-Nuevo, \"B\"-BCP, \"T\"-Tabla Paginas, \"S\"-Susp, \"R\"-Regresar" << endl;
+}
+
+void Simulator::printMemoryMap() {
+    int totalWidth = 107; 
+    centerText("ESTADO DE LA MEMORIA (46 MARCOS)", totalWidth);
+    
+    cout << "| Mco | Proce | Pg | Uso | | Mco | Proce | Pg | Uso | | Mco | Proce | Pg | Uso | | Mco | Proce | Pg | Uso |" << endl;
+    cout << string(totalWidth, '-') << endl;
+
+    for (int i = 0; i < 12; i++) {
+        auto printFrame = [&](int idx) {
+            if (idx >= 46) { 
+                cout << "|     |       |    |     |";
+                return;
+            }
+            
+            Frame& f = memory.getFrame(idx); 
+            cout << "| " << setw(3) << left << idx << " | ";
+            
+            if (f.jobID == 0) {
+                cout << setw(5) << left << "S.O." << " | " << setw(2) << left << "-" << " | " << setw(3) << left << "5/5" << " |";
+            } else if (f.jobID == -1) {
+                cout << setw(5) << left << "Libre" << " | " << setw(2) << left << "-" << " | " << setw(3) << left << "0/5" << " |";
+            } else {
+                string etiqueta = (f.state == RUNNING) ? " E" : (f.state == BLOCKED) ? " B" : " L";
+                string procStr = to_string(f.jobID) + etiqueta; 
+                
+                cout << setw(5) << left << procStr << " | " << setw(2) << left << f.pageID << " | " << setw(3) << left << (to_string(f.usedSpace) + "/5") << " |";
+            }
+        };
+
+        printFrame(i);      cout << " ";
+        printFrame(i + 12); cout << " ";
+        printFrame(i + 24); cout << " ";
+        printFrame(i + 36); cout << endl;
+    }
+    cout << string(totalWidth, '-') << endl;
 }
 
 void Simulator::printFinalState() {
@@ -464,40 +512,4 @@ void Simulator::printBCPTable() {
     cout << "\nPresione 'C' para continuar..." << endl;
 
     pauseSimulation();
-}
-
-void Simulator::printMemoryMap() {
-    int totalWidth = 91; 
-    centerText("ESTADO DE LA MEMORIA (46 MARCOS)", totalWidth);
-    
-    cout << "| Mco | Proceso | Pag | Uso |  | Mco | Proceso | Pag | Uso |  | Mco | Proceso | Pag | Uso |" << endl;
-    cout << string(totalWidth, '-') << endl;
-
-    for (int i = 0; i < 16; i++) {
-        auto printFrame = [&](int idx) {
-            if (idx >= 46) {
-                cout << "|     |         |     |     |"; 
-                return;
-            }
-            
-            Frame& f = memory.getFrame(idx); 
-            cout << "| " << setw(3) << left << idx << " | ";
-            
-            if (f.jobID == 0) {
-                cout << setw(7) << left << "S.O." << " | " << setw(3) << left << "-" << " | " << setw(3) << left << "5/5" << " |";
-            } else if (f.jobID == -1) {
-                cout << setw(7) << left << "Libre" << " | " << setw(3) << left << "-" << " | " << setw(3) << left << "0/5" << " |";
-            } else {
-                string etiqueta = (f.state == RUNNING) ? "E" : (f.state == BLOCKED) ? "B" : "L";
-                string procStr = to_string(f.jobID) + "(" + etiqueta + ")";
-                
-                cout << setw(7) << left << procStr << " | " << setw(3) << left << f.pageID << " | " << setw(3) << left << (to_string(f.usedSpace) + "/5") << " |";
-            }
-        };
-
-        printFrame(i);      cout << "  ";
-        printFrame(i + 16); cout << "  ";
-        printFrame(i + 32); cout << endl;
-    }
-    cout << string(totalWidth, '-') << endl;
 }
